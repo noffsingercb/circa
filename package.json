@@ -1,0 +1,26 @@
+{
+	"name": "circa",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"description": "Enter a few life events, get the history that surrounded them.",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-static": "^3.0.6",
+		"@sveltejs/kit": "^2.7.0",
+		"@sveltejs/vite-plugin-svelte": "^3.1.2",
+		"svelte": "^4.2.19",
+		"svelte-check": "^4.0.0",
+		"tslib": "^2.7.0",
+		"typescript": "^5.6.0",
+		"vite": "^5.4.0",
+		"vitest": "^2.1.0"
+	}
+}
