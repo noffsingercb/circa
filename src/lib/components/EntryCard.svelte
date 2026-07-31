@@ -10,17 +10,52 @@
 		global: 'Global'
 	};
 
+	/**
+	 * Births and deaths are drawn from the engine's person tier but keep a stored
+	 * scope of 'local', so rendering entry.scope verbatim badges David Packard's
+	 * birth as "Local" alongside genuinely local history. That misreads a working
+	 * feature as a bug -- the person tier exists precisely so people do not
+	 * consume local slots.
+	 *
+	 * The engine does not report which tier a row was drawn from, so category is
+	 * the available proxy. It is exact: PERSON_CATEGORIES in core.ts is
+	 * {birth, death}, the same test used to route the draw.
+	 */
+	$: isPerson = entry.category === 'birth' || entry.category === 'death';
+
+	$: scopeKey = isPerson ? 'person' : (entry.scope ?? 'unknown');
+
+	$: scopeLabel = isPerson
+		? 'Person'
+		: entry.scope
+			? (SCOPE_LABEL[entry.scope] ?? entry.scope)
+			: 'Unclassified';
+
 	$: reachNote = `${Math.round(entry.distanceKm)} km of ${Math.round(entry.reachKm)} km reach`;
 </script>
 
 <article class="card">
 	<p class="date">{entry.date}</p>
 	<h3>
-		<a href={entry.sourceUrl} target="_blank" rel="noopener noreferrer">{entry.title}</a>
+		<!--
+			displayTitle, not title. The dump titles rows after entities, so title
+			holds "Oklahoma" where displayTitle holds "Oklahoma Statehood", and
+			"Insulin" where displayTitle holds "Discovery of Insulin". The engine
+			guarantees displayTitle is populated, falling back to title itself, so
+			no fallback is needed here.
+		-->
+		{#if entry.sourceUrl}
+			<a href={entry.sourceUrl} target="_blank" rel="noopener noreferrer">{entry.displayTitle}</a>
+		{:else}
+			<!-- Dump rows without a source link render as plain text rather than as a dead anchor. -->
+			<span>{entry.displayTitle}</span>
+		{/if}
 	</h3>
-	<p class="blurb">{entry.blurb}</p>
+	{#if entry.blurb}
+		<p class="blurb">{entry.blurb}</p>
+	{/if}
 	<p class="chips">
-		<span class="chip scope {entry.scope}">{SCOPE_LABEL[entry.scope] ?? entry.scope}</span>
+		<span class="chip scope {scopeKey}">{scopeLabel}</span>
 		<span class="chip">{reachNote}</span>
 		{#if entry.relaxed}
 			<span class="chip relaxed" title="Little happened nearby in this stretch, so the bar for inclusion was lowered.">
@@ -99,5 +134,17 @@
 		background: var(--accent-soft);
 		border-color: #e0cdb4;
 		color: #6d4419;
+	}
+
+	/* Person rows read as biography rather than geography, so they get their own
+	   colour instead of borrowing the local chip's. */
+	.chip.scope.person {
+		background: #eef2f7;
+		border-color: #cfd9e6;
+		color: #3d5573;
+	}
+
+	.chip.scope.unknown {
+		font-style: italic;
 	}
 </style>
