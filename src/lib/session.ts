@@ -41,8 +41,31 @@ export const result = writable<CircaResult | null>(null);
 export const errorMessage = writable<string>('');
 export const segments = writable<SegmentInput[]>([]);
 
+/**
+ * Where a newly added row belongs.
+ *
+ * The form opens with a birth and a death, so appending put every added row
+ * after the death -- a life that ends and then carries on. The timeline sorts
+ * by date regardless, so the form was the only place that read out of order,
+ * and it was the place the visitor was actually looking.
+ *
+ * The test is deliberately shallow: only a death in the final position moves.
+ * Anything else appends. If someone has already arranged their rows, or has
+ * removed the death, this should not have an opinion about it.
+ */
+function insertionIndex(rows: LifeEvent[]): number {
+	const last = rows.length - 1;
+	if (last < 0) return 0;
+	return rows[last].kind === 'death' ? last : rows.length;
+}
+
 export function addEvent(): void {
-	events.update((rows) => (rows.length >= MAX_EVENTS ? rows : [...rows, newEvent()]));
+	events.update((rows) => {
+		if (rows.length >= MAX_EVENTS) return rows;
+		const next = rows.slice();
+		next.splice(insertionIndex(rows), 0, newEvent());
+		return next;
+	});
 }
 
 export function removeEvent(id: string): void {
