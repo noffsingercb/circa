@@ -1,62 +1,96 @@
 <script lang="ts">
 	import EntryCard from '$lib/components/EntryCard.svelte';
-	import { MIN_GAP_PX, PX_PER_YEAR } from '$lib/config';
-	import type { CircaEntry, CircaResult } from '$lib/types';
+	import { isoStart } from '$lib/dates';
+	import type { CircaEntry, CircaResult, LifeEvent } from '$lib/types';
 
 	export let data: CircaResult;
 
-	interface Placed {
-		entry: CircaEntry;
-		y: number;
-		trueY: number;
+	/**
+	 * The visitor's own life events, merged into the same stream as the history.
+	 *
+	 * Optional, and empty by default, so the component still renders on its own
+	 * in the embed route where there is no form to supply them.
+	 */
+	export let lifeEvents: LifeEvent[] = [];
+
+	/**
+	 * A single row of the timeline: either something the engine returned or
+	 * something the visitor typed. Both carry an ISO date so the two can be
+	 * ordered against each other.
+	 */
+	type Row =
+		| { kind: 'entry'; key: string; iso: string; year: number; entry: CircaEntry }
+		| { kind: 'life'; key: string; iso: string; year: number; life: LifeEvent };
+
+	const KIND_LABEL: Record<string, string> = {
+		birth: 'Born',
+		death: 'Died',
+		residence: 'Lived in',
+		marriage: 'Married'
+	};
+
+	function kindLabel(kind: string): string {
+		return KIND_LABEL[kind] ?? kind.charAt(0).toUpperCase() + kind.slice(1);
 	}
 
-	function fractionalYear(iso: string): number {
-		const year = Number(iso.slice(0, 4));
-		const month = Number(iso.slice(5, 7)) || 1;
-		const day = Number(iso.slice(8, 10)) || 1;
-		const yearStart = Date.UTC(year, 0, 1);
-		const yearLength = Date.UTC(year + 1, 0, 1) - yearStart;
-		return year + (Date.UTC(year, month - 1, day) - yearStart) / yearLength;
+	function yearOfIso(iso: string): number {
+		return Number(iso.slice(0, 4));
 	}
 
 	/**
-	 * Position every entry on a true year scale, then push apart anything that
-	 * would overlap. A leader line is drawn back to the honest position so a
-	 * dense cluster still reads as a cluster.
+	 * scope is nullable on the wire, and an unclassified row would otherwise
+	 * produce class="dot null" in the markup.
 	 */
-	function layout(entries: CircaEntry[]): Placed[] {
-		if (entries.length === 0) return [];
-		const origin = fractionalYear(entries[0].dateStartISO);
-		let previous = Number.NEGATIVE_INFINITY;
+	function scopeClass(entry: CircaEntry): string {
+		if (entry.category === 'birth' || entry.category === 'death') return 'person';
+		return entry.scope ?? 'unknown';
+	}
 
-		return entries.map((entry) => {
-			const trueY = (fractionalYear(entry.dateStartISO) - origin) * PX_PER_YEAR;
-			const y = Math.max(trueY, previous + MIN_GAP_PX);
-			previous = y;
-			return { entry, y, trueY };
+	/**
+	 * Merge the two sources into one ordered list.
+	 *
+	 * Ties are broken by putting the life event first: if someone was born in
+	 * the same year as a recorded event, the birth is the reason the rest of
+	 * the row exists and reads better above it.
+	 */
+	function buildRows(entries: CircaEntry[], life: LifeEvent[]): Row[] {
+		const rows: Row[] = entries.map((entry) => ({
+			kind: 'entry' as const,
+			key: `entry:${entry.id}`,
+			iso: entry.dateStartISO,
+			year: yearOfIso(entry.dateStartISO),
+			entry
+		}));
+
+		for (const event of life) {
+			// A row with no year cannot be placed, and a half-filled form is the
+			// normal state of this app rather than an error.
+			if (event.date.year === null) continue;
+			const iso = isoStart(event.date);
+			rows.push({
+				kind: 'life' as const,
+				key: `life:${event.id}`,
+				iso,
+				year: yearOfIso(iso),
+				life: event
+			});
+		}
+
+		return rows.sort((a, b) => {
+			if (a.iso !== b.iso) return a.iso < b.iso ? -1 : 1;
+			if (a.kind === b.kind) return 0;
+			return a.kind === 'life' ? -1 : 1;
 		});
 	}
 
 	$: entries = data.entries;
-	$: placed = layout(entries);
-	$: firstYear = entries.length ? Math.floor(fractionalYear(entries[0].dateStartISO)) : 0;
-	$: lastYear = entries.length
-		? Math.ceil(fractionalYear(entries[entries.length - 1].dateStartISO))
-		: 0;
-	$: height = placed.length ? placed[placed.length - 1].y + 150 : 0;
-	$: ticks = buildTicks(firstYear, lastYear);
+	$: rows = buildRows(entries, lifeEvents);
+	$: firstYear = rows.length ? rows[0].year : 0;
+	$: lastYear = rows.length ? rows[rows.length - 1].year : 0;
 
-	function buildTicks(from: number, to: number): { year: number; y: number }[] {
-		if (!from || to <= from) return [];
-		const step = to - from > 160 ? 25 : to - from > 60 ? 10 : 5;
-		const start = Math.ceil(from / step) * step;
-		const out: { year: number; y: number }[] = [];
-		for (let year = start; year <= to; year += step) {
-			out.push({ year, y: (year - from) * PX_PER_YEAR });
-		}
-		return out;
-	}
+	// The year is printed only where it changes. Repeating it against every
+	// card in a busy decade adds noise without adding information.
+	$: yearShown = rows.map((row, index) => index === 0 || row.year !== rows[index - 1].year);
 </script>
 
 {#if entries.length === 0}
@@ -71,26 +105,37 @@
 		</p>
 	{/if}
 
-	<div class="timeline" style="height: {height}px">
-		<div class="rail"></div>
+	<ol class="timeline">
+		<div class="rail" aria-hidden="true"></div>
 
-		{#each ticks as tick (tick.year)}
-			<div class="tick" style="top: {tick.y}px"><span>{tick.year}</span></div>
-		{/each}
+		{#each rows as row, index (row.key)}
+			<li class="row">
+				<div class="gutter">
+					{#if yearShown[index]}<span class="year">{row.year}</span>{/if}
+				</div>
 
-		{#each placed as item (item.entry.id)}
-			{#if item.y - item.trueY > 4}
-				<div
-					class="leader"
-					style="top: {item.trueY}px; height: {item.y - item.trueY}px"
-				></div>
-			{/if}
-			<div class="dot {item.entry.scope}" style="top: {item.y}px"></div>
-			<div class="entry" style="top: {item.y - 12}px">
-				<EntryCard entry={item.entry} />
-			</div>
+				{#if row.kind === 'life'}
+					<span class="dot life" aria-hidden="true"></span>
+					<div class="body">
+						<div class="life-card">
+							<p class="life-kind">{kindLabel(row.life.kind)}</p>
+							<p class="life-title">
+								{row.life.label || row.life.place?.name || 'A life event'}
+							</p>
+							{#if row.life.label && row.life.place}
+								<p class="life-place">{row.life.place.name}</p>
+							{/if}
+						</div>
+					</div>
+				{:else}
+					<span class="dot {scopeClass(row.entry)}" aria-hidden="true"></span>
+					<div class="body">
+						<EntryCard entry={row.entry} />
+					</div>
+				{/if}
+			</li>
 		{/each}
-	</div>
+	</ol>
 
 	<p class="provenance">
 		{entries.length} events · {firstYear}–{lastYear} · dataset {data.datasetVersion} · {data.generatedWith}
@@ -100,76 +145,127 @@
 <style>
 	.timeline {
 		position: relative;
+		list-style: none;
 		margin: 1.5rem 0 0;
-		padding-left: 5.5rem;
+		padding: 0;
 	}
 
+	/*
+	 * The rail is decoration now rather than a scale. It stops short at both
+	 * ends so it does not appear to continue past the first and last events.
+	 */
 	.rail {
 		position: absolute;
-		left: 5rem;
-		top: 0;
-		bottom: 0;
+		left: 5.2rem;
+		top: 0.9rem;
+		bottom: 0.9rem;
 		width: 2px;
 		background: var(--line);
 	}
 
-	.tick {
-		position: absolute;
-		left: 0;
-		width: 4.4rem;
-		text-align: right;
-		font-size: 0.7rem;
-		color: var(--ink-soft);
-		border-top: 1px dashed transparent;
-		transform: translateY(-0.5em);
+	.row {
+		display: grid;
+		grid-template-columns: 4.4rem 1.6rem minmax(0, 1fr);
+		align-items: start;
+		margin: 0 0 1.1rem;
 	}
 
-	.leader {
-		position: absolute;
-		left: 5rem;
-		width: 2px;
-		background: var(--accent-soft);
+	.row:last-child {
+		margin-bottom: 0;
+	}
+
+	.gutter {
+		text-align: right;
+		padding-top: 0.55rem;
+	}
+
+	.year {
+		font-size: 0.72rem;
+		color: var(--ink-soft);
+		font-variant-numeric: tabular-nums;
 	}
 
 	.dot {
-		position: absolute;
-		left: 5rem;
+		justify-self: center;
+		margin-top: 0.72rem;
 		width: 9px;
 		height: 9px;
-		margin-left: -3.5px;
 		border-radius: 50%;
 		background: #fff;
 		border: 2px solid var(--ink-soft);
+		z-index: 1;
 	}
 
 	/* Dot weight tracks how far the event reached, not how close it was. */
 	.dot.local {
 		width: 7px;
 		height: 7px;
-		margin-left: -2.5px;
 		border-color: #b6ac9c;
 	}
 
 	.dot.national {
 		width: 11px;
 		height: 11px;
-		margin-left: -4.5px;
 		border-color: var(--accent);
 	}
 
 	.dot.global {
 		width: 13px;
 		height: 13px;
-		margin-left: -5.5px;
 		border-color: var(--accent);
 		background: var(--accent);
 	}
 
-	.entry {
-		position: absolute;
-		left: 6.5rem;
-		right: 0;
+	.dot.person {
+		border-color: #3d5573;
+	}
+
+	.dot.unknown {
+		border-style: dotted;
+	}
+
+	.dot.life {
+		width: 11px;
+		height: 11px;
+		border-color: #3d5573;
+		background: #3d5573;
+	}
+
+	.body {
+		min-width: 0;
 		max-width: 34rem;
+	}
+
+	/*
+	 * Life events are filled rather than white so they read as the visitor's
+	 * own rows at a glance, without a legend.
+	 */
+	.life-card {
+		background: #eef2f7;
+		border: 1px solid #cfd9e6;
+		border-radius: 8px;
+		padding: 0.7rem 0.9rem;
+	}
+
+	.life-kind {
+		margin: 0 0 0.15rem;
+		font-size: 0.7rem;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: #3d5573;
+	}
+
+	.life-title {
+		margin: 0;
+		font-family: var(--font);
+		font-size: 1rem;
+		color: var(--ink);
+	}
+
+	.life-place {
+		margin: 0.2rem 0 0;
+		font-size: 0.82rem;
+		color: var(--ink-soft);
 	}
 
 	.notice {
