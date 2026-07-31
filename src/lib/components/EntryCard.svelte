@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { CircaEntry } from '$lib/types';
+	import { distanceUnit, formatDistance } from '$lib/units';
 
 	export let entry: CircaEntry;
 
@@ -31,7 +32,15 @@
 			? (SCOPE_LABEL[entry.scope] ?? entry.scope)
 			: 'Unclassified';
 
-	$: reachNote = `${Math.round(entry.distanceKm)} km of ${Math.round(entry.reachKm)} km reach`;
+	/*
+	 * Both figures follow the toggle. Converting the distance and leaving the
+	 * reach in kilometres would put two units in one sentence and make the
+	 * comparison between them meaningless, which is the whole point of the line.
+	 */
+	$: reachNote = `${formatDistance(entry.distanceKm, $distanceUnit)} of ${formatDistance(
+		entry.reachKm,
+		$distanceUnit
+	)} reach`;
 </script>
 
 <article class="card">
