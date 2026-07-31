@@ -1,15 +1,14 @@
 import {
 	API_BASE,
-	BASE_FLOOR,
 	GLOBAL_CAP,
 	MAX_PER_SEGMENT,
 	MAX_SEGMENTS,
 	MIN_MATCHES,
-	RELAXED_FLOOR,
+	RELAXED_LOCAL_FLOOR,
 	REQUEST_TIMEOUT_MS,
 	TIMELINE_PATH
 } from './config';
-import type { CircaEntry, CircaResult, SegmentInput, Timeline } from './types';
+import type { CircaEntry, CircaResult, EngineConfig, SegmentInput, Timeline } from './types';
 
 export class ApiError extends Error {
 	readonly status: number;
@@ -23,9 +22,25 @@ export class ApiError extends Error {
 
 type FetchLike = typeof fetch;
 
+/**
+ * POST a set of segments to the engine.
+ *
+ * The second parameter used to be a single significanceFloor number. It is now
+ * a config fragment, because the interesting knob is no longer a scalar: the
+ * engine tunes thresholds per scope, and the two calls this module makes differ
+ * in exactly one of them. Passing a fragment also means the shape of what we
+ * send is visible at each call site rather than encoded in a bare float.
+ *
+ * Note what the base config does NOT contain: any floor at all. Circa used to
+ * send significanceFloor: 0.15 on every request, which the engine applies as a
+ * blanket minimum across every scope that scopeFloor does not name -- silently
+ * lifting the local floor from 0.05 to 0.15 and filtering out the curated local
+ * rows, whose significance averages 0.133. Sending nothing lets the engine's
+ * own per-scope defaults stand.
+ */
 async function postTimeline(
 	segments: SegmentInput[],
-	significanceFloor: number,
+	configOverrides: Partial<EngineConfig>,
 	fetchImpl: FetchLike
 ): Promise<Timeline> {
 	const controller = new AbortController();
@@ -39,9 +54,9 @@ async function postTimeline(
 			body: JSON.stringify({
 				segments,
 				config: {
-					significanceFloor,
 					maxPerSegment: MAX_PER_SEGMENT,
-					maxSegments: MAX_SEGMENTS
+					maxSegments: MAX_SEGMENTS,
+					...configOverrides
 				}
 			})
 		});
@@ -67,7 +82,8 @@ export async function fetchTimeline(
 	segments: SegmentInput[],
 	fetchImpl: FetchLike = fetch
 ): Promise<CircaResult> {
-	const base = await postTimeline(segments, BASE_FLOOR, fetchImpl);
+	// No floor overrides: the engine's per-scope defaults are the tuned ones.
+	const base = await postTimeline(segments, {}, fetchImpl);
 	const entries: CircaEntry[] = base.entries.map((entry) => ({ ...entry, relaxed: false }));
 
 	const counts = new Array<number>(segments.length).fill(0);
@@ -83,9 +99,15 @@ export async function fetchTimeline(
 	let relaxedSegments: number[] = [];
 
 	if (thin.length > 0) {
+		// scopeFloor.local, deliberately not significanceFloor. A scalar would also
+		// lower the floor on the person tier -- births and deaths are filtered by
+		// significanceFloor, not by any scope entry -- so a sparse segment would
+		// backfill with obscure local figures instead of local history. Naming the
+		// scope explicitly also exempts it from the engine's blanket-minimum rule
+		// and leaves regional, national and global untouched.
 		const retry = await postTimeline(
 			thin.map((index) => segments[index]),
-			RELAXED_FLOOR,
+			{ scopeFloor: { local: RELAXED_LOCAL_FLOOR } },
 			fetchImpl
 		);
 		const seen = new Set(entries.map((entry) => entry.id));
