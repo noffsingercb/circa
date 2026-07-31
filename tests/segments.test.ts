@@ -96,11 +96,17 @@ describe('deriveSegments', () => {
 
 		const denver = segments[2];
 
+		// SegmentInput.end is optional -- a segment with no end is a point in time
+		// as far as the engine is concerned -- so it has to be narrowed before it
+		// can be compared. deriveSegments always sets it; the type is wider than
+		// what this function produces.
+		const denverEnd = denver.end as string;
+
 		// Eight years back from the end of the death year, so the window has real
 		// width and events near Denver can fall inside it.
 		expect(denver.start).toBe('1946-12-31');
-		expect(denver.end).toBe('1954-12-31');
-		expect(denver.start < denver.end).toBe(true);
+		expect(denverEnd).toBe('1954-12-31');
+		expect(denver.start < denverEnd).toBe(true);
 
 		// The preceding segment is deliberately NOT truncated: we have no evidence
 		// for when the person left Chicago, and shortening it could only remove
