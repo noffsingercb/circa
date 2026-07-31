@@ -11,10 +11,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # No cache: npm here on purpose. It requires a lockfile, and this repo
+      # has none -- see the note in README under Tooling. Restore the cache
+      # (and switch the install below to npm ci) the moment package-lock.json
+      # is committed.
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
       - run: npm install
 

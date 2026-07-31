@@ -4,6 +4,9 @@
  * Rules of the road:
  *  1. No magic numbers anywhere else in the codebase. If you find yourself
  *     typing a literal into a component or a lib module, it belongs here.
+ *     Pure presentation values -- padding, gaps, colours -- are the exception
+ *     and live in the component's own stylesheet; see the note where
+ *     PX_PER_YEAR used to be.
  *  2. Every value is overridable by a VITE_ env var, so tuning during
  *     development (or per-deployment) never requires a code change or a
  *     rebuild of anything but the static bundle.
@@ -76,6 +79,9 @@ export const LIFESPAN_CAP_YEARS = num('VITE_LIFESPAN_CAP_YEARS', 100);
  * they were there for a while. Eight years is a guess, chosen to be long
  * enough to catch a settled final chapter without swallowing the preceding
  * segment whole. It is clamped so it can never start before the prior event.
+ *
+ * Confirmed against the Pueblo run: with the lookback in place the Denver
+ * segment returned rows for the first time, including four within 13 km.
  */
 export const DEATH_LOOKBACK_YEARS = num('VITE_DEATH_LOOKBACK_YEARS', 8);
 
@@ -85,11 +91,22 @@ export const MAX_EVENTS = num('VITE_MAX_EVENTS', 20);
 /** Hard ceiling on rendered entries, applied after the engine responds. */
 export const GLOBAL_CAP = num('VITE_GLOBAL_CAP', 80);
 
-/** Pixels of vertical timeline per calendar year. Drives the year scale. */
-export const PX_PER_YEAR = num('VITE_PX_PER_YEAR', 14);
-
-/** Minimum vertical gap between two entry cards before they get nudged apart. */
-export const MIN_GAP_PX = num('VITE_MIN_GAP_PX', 96);
+/*
+ * PX_PER_YEAR and MIN_GAP_PX were removed here.
+ *
+ * They encoded a timeline whose vertical axis was a true year scale, with a
+ * minimum gap applied on top wherever two cards would have collided. Those two
+ * rules contradict each other by construction: the moment the gap fires, the
+ * position is no longer proportional to the year, and everything below it is
+ * displaced. The year labels were drawn from the unadjusted scale, so a single
+ * dense decade pushed every card out of step with its own label for the rest
+ * of the page.
+ *
+ * Cards are now spaced evenly and each carries its own year, so there is no
+ * conversion between years and pixels anywhere in the app. Row spacing lives
+ * in TimelineView's stylesheet: CSS cannot read import.meta.env, and unlike
+ * the values above it changes nothing about which events are chosen or shown.
+ */
 
 /* -------------------------------------------------------------------------- */
 /* ENGINE MIRRORS -- keep in step with geohistory-core DEFAULT_CONFIG         */

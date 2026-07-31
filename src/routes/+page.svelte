@@ -1,7 +1,8 @@
 <script lang="ts">
 	import EventForm from '$lib/components/EventForm.svelte';
 	import TimelineView from '$lib/components/TimelineView.svelte';
-	import { result, status } from '$lib/session';
+	import { result, status, timelineEvents } from '$lib/session';
+	import { distanceUnit } from '$lib/units';
 </script>
 
 <svelte:head>
@@ -29,9 +30,37 @@
 		<div class="results">
 			<div class="results-head no-print">
 				<h2>The timeline</h2>
-				<button type="button" class="ghost" on:click={() => window.print()}>Print</button>
+				<div class="head-actions">
+					<!--
+						Two buttons rather than a switch: both units stay readable, and the
+						active one is stated outright instead of being inferred from which
+						side a slider sits on. aria-pressed is what makes that state
+						audible to a screen reader.
+					-->
+					<div class="units" role="group" aria-label="Distance units">
+						<button
+							type="button"
+							class:active={$distanceUnit === 'km'}
+							aria-pressed={$distanceUnit === 'km'}
+							on:click={() => distanceUnit.set('km')}
+						>
+							km
+						</button>
+						<button
+							type="button"
+							class:active={$distanceUnit === 'mi'}
+							aria-pressed={$distanceUnit === 'mi'}
+							on:click={() => distanceUnit.set('mi')}
+						>
+							mi
+						</button>
+					</div>
+					<button type="button" class="ghost" on:click={() => window.print()}>Print</button>
+				</div>
 			</div>
-			<TimelineView data={$result} />
+			<!-- $timelineEvents, not $events: the rail describes the request that was
+			     answered, and the live form does not emit on every keystroke anyway. -->
+			<TimelineView data={$result} lifeEvents={$timelineEvents} />
 		</div>
 	{/if}
 </main>
@@ -65,6 +94,12 @@
 		padding-top: 1.5rem;
 	}
 
+	.head-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
 	h2 {
 		font-family: var(--font);
 		font-size: 1.3rem;
@@ -78,6 +113,35 @@
 		border-radius: 6px;
 		padding: 0.35rem 0.75rem;
 		font-size: 0.8rem;
+	}
+
+	/* One outline around the pair, so they read as two states of one control
+	   rather than two unrelated buttons. */
+	.units {
+		display: inline-flex;
+		border: 1px solid var(--line);
+		border-radius: 6px;
+		overflow: hidden;
+		background: #fff;
+	}
+
+	.units button {
+		border: 0;
+		background: transparent;
+		color: var(--ink-soft);
+		padding: 0.35rem 0.6rem;
+		font-size: 0.8rem;
+		font-variant-numeric: tabular-nums;
+		cursor: pointer;
+	}
+
+	.units button + button {
+		border-left: 1px solid var(--line);
+	}
+
+	.units button.active {
+		background: var(--accent-soft);
+		color: #6d4419;
 	}
 
 	.working {

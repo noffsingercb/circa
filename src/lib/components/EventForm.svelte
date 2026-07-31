@@ -2,14 +2,47 @@
 	import EventRow from '$lib/components/EventRow.svelte';
 	import { MAX_EVENTS } from '$lib/config';
 	import { addEvent, errorMessage, events, removeEvent, reset, status, submit } from '$lib/session';
+	import type { LifeEventKind } from '$lib/types';
+
+	/**
+	 * Kinds a life can only have once. deriveSegments already behaves this way --
+	 * it uses the first birth and the last death -- so allowing duplicates in the
+	 * form only produced rows that were displayed and then ignored.
+	 */
+	const UNIQUE_KINDS: LifeEventKind[] = ['birth', 'death'];
+
+	$: takenKinds = UNIQUE_KINDS.filter((kind) => $events.some((row) => row.kind === kind));
+
+	/**
+	 * Re-publish the rows so anything derived from them recomputes.
+	 *
+	 * EventRow edits its row object in place and never reassigns the array, so
+	 * the store does not emit when a kind is chosen or a year typed. Without
+	 * this, takenKinds above would be computed from whatever the rows looked
+	 * like at the last add or remove -- the exact failure that kept life events
+	 * off the timeline earlier tonight.
+	 *
+	 * Native change events bubble, so one handler on the form catches every
+	 * row's select. The array is copied but the row objects are not, and the
+	 * keyed each keys on id, so nothing is re-created and no input loses focus.
+	 */
+	function republish() {
+		events.update((rows) => rows.slice());
+	}
 </script>
 
 <form
 	class="form no-print"
 	on:submit|preventDefault={submit}
+	on:change={republish}
 >
 	{#each $events as event (event.id)}
-		<EventRow {event} canRemove={$events.length > 1} on:remove={(e) => removeEvent(e.detail)} />
+		<EventRow
+			{event}
+			canRemove={$events.length > 1}
+			disabledKinds={takenKinds}
+			on:remove={(e) => removeEvent(e.detail)}
+		/>
 	{/each}
 
 	<div class="actions">
@@ -25,7 +58,7 @@
 
 	<p class="hint">
 		Enter as much or as little as you know. A year alone is fine, and so is a country alone.
-		One birth or death is required so the span has an anchor.
+		One birth or death is required so the span has an anchor, and there can only be one of each.
 	</p>
 
 	{#if $status === 'error' && $errorMessage}
