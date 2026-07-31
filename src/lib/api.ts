@@ -1,12 +1,14 @@
 import {
 	API_BASE,
 	GLOBAL_CAP,
+	HEALTH_PATH,
 	MAX_PER_SEGMENT,
 	MAX_SEGMENTS,
 	MIN_MATCHES,
 	RELAXED_LOCAL_FLOOR,
 	REQUEST_TIMEOUT_MS,
-	TIMELINE_PATH
+	TIMELINE_PATH,
+	WARMUP_TIMEOUT_MS
 } from './config';
 import type { CircaEntry, CircaResult, EngineConfig, SegmentInput, Timeline } from './types';
 
@@ -21,6 +23,61 @@ export class ApiError extends Error {
 }
 
 type FetchLike = typeof fetch;
+
+/**
+ * Tracks the in-flight (or completed) warm-up so it only ever happens once per
+ * page load. Without this, a component that mounts twice -- or a future second
+ * caller -- would send a second ping for no benefit.
+ */
+let warmUpPromise: Promise<void> | null = null;
+
+/**
+ * Wake the API without waiting for it.
+ *
+ * The service is hosted on a free Render instance, which sleeps after roughly
+ * 15 minutes without traffic. The next request then pays a cold start of up to
+ * a minute while the container boots -- and the person who pays it is always a
+ * first-time visitor, because a returning one arrives at a service that is
+ * already awake. The worst experience is reserved for exactly the audience we
+ * most want to keep.
+ *
+ * So we spend the boot during the part of the visit that is already slow: the
+ * seconds someone takes to read the page and type a name, a place and a date.
+ * By the time they submit, the container is up and the request is fast.
+ *
+ * Three properties matter, and all three are deliberate:
+ *
+ *  - It CANNOT throw. Every failure path resolves. A page that broke because
+ *    an optimisation failed would be a strictly worse page than one with no
+ *    optimisation at all, and a rejected promise nobody awaits also produces
+ *    an unhandled rejection in the console.
+ *  - It CANNOT block. Callers are not expected to await it; the form works
+ *    exactly as before whether this succeeds, fails, or is still in flight.
+ *  - It is IDEMPOTENT. Repeat calls return the same promise.
+ *
+ * It is not a guarantee. A visitor who submits within a few seconds of landing
+ * still races the boot, which is why REQUEST_TIMEOUT_MS was also raised past
+ * the worst-case cold start. This makes the slow case rare; the timeout makes
+ * it survivable.
+ */
+export function warmUp(fetchImpl: FetchLike = fetch): Promise<void> {
+	if (warmUpPromise) return warmUpPromise;
+
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), WARMUP_TIMEOUT_MS);
+
+	warmUpPromise = fetchImpl(API_BASE + HEALTH_PATH, {
+		method: 'GET',
+		signal: controller.signal
+	})
+		.then(() => undefined)
+		// Swallowed on purpose. A failed warm-up is not a failed page: the real
+		// request will report a real problem in its own words if there is one.
+		.catch(() => undefined)
+		.finally(() => clearTimeout(timer));
+
+	return warmUpPromise;
+}
 
 /**
  * POST a set of segments to the engine.
