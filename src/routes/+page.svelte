@@ -1,16 +1,7 @@
 <script lang="ts">
 	import EventForm from '$lib/components/EventForm.svelte';
 	import TimelineView from '$lib/components/TimelineView.svelte';
-	import { events, result, status } from '$lib/session';
-
-	/**
-	 * Only rows the engine actually saw are drawn on the timeline.
-	 *
-	 * deriveSegments ignores any row missing a place or a year, so those rows
-	 * had no influence on the results. Showing them anyway would imply the
-	 * history around them was searched, which it was not.
-	 */
-	$: placedLifeEvents = $events.filter((row) => row.place !== null && row.date.year !== null);
+	import { result, status, timelineEvents } from '$lib/session';
 </script>
 
 <svelte:head>
@@ -40,7 +31,9 @@
 				<h2>The timeline</h2>
 				<button type="button" class="ghost" on:click={() => window.print()}>Print</button>
 			</div>
-			<TimelineView data={$result} lifeEvents={placedLifeEvents} />
+			<!-- $timelineEvents, not $events: the rail describes the request that was
+			     answered, and the live form does not emit on every keystroke anyway. -->
+			<TimelineView data={$result} lifeEvents={$timelineEvents} />
 		</div>
 	{/if}
 </main>
