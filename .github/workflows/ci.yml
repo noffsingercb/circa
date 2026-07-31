@@ -11,15 +11,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # No cache: npm here on purpose. It requires a lockfile, and this repo
-      # has none -- see the note in README under Tooling. Restore the cache
-      # (and switch the install below to npm ci) the moment package-lock.json
-      # is committed.
+      # cache: npm requires a lockfile, which this repo lacked until
+      # 2026-07-31. Both halves of that wait are now over: the cache is on,
+      # and the install below is npm ci rather than npm install.
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
-      - run: npm install
+      # npm ci, not npm install. install resolves ^ ranges fresh on every run,
+      # so a transitive release could turn this job red without a single line
+      # changing here -- and it would do so at the least convenient moment,
+      # since nothing in the diff would explain it. ci installs the locked tree
+      # exactly and errors if package-lock.json and package.json disagree,
+      # which turns a silent drift into a loud, obvious failure.
+      - run: npm ci
 
       - name: Typecheck
         run: npm run check
