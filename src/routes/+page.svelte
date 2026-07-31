@@ -1,8 +1,29 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import { warmUp } from '$lib/api';
 	import EventForm from '$lib/components/EventForm.svelte';
 	import TimelineView from '$lib/components/TimelineView.svelte';
 	import { result, status, timelineEvents } from '$lib/session';
 	import { distanceUnit } from '$lib/units';
+
+	/*
+	 * Wake the API while the visitor reads and types.
+	 *
+	 * The service sleeps on the free tier after about 15 minutes of quiet, and
+	 * booting it can take up to a minute. Anyone filling in this form needs at
+	 * least a name, a place and a date first, so the boot overlaps with work the
+	 * visitor was going to do anyway and is usually invisible.
+	 *
+	 * onMount rather than module scope: this must not run during the prerender
+	 * that adapter-static does at build time, where there is no visitor to warm
+	 * anything for and the API URL may not even be reachable from the builder.
+	 *
+	 * void, not await: nothing on this page waits for it. warmUp never rejects,
+	 * so there is no failure to handle here -- see the contract in api.ts.
+	 */
+	onMount(() => {
+		void warmUp();
+	});
 </script>
 
 <svelte:head>

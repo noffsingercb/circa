@@ -49,13 +49,51 @@ function str(key: string, fallback: string): string {
 /* API                                                                        */
 /* -------------------------------------------------------------------------- */
 
-/** Base URL of the GeoHistory API service. No trailing slash. */
+/**
+ * Base URL of the GeoHistory API service. No trailing slash.
+ *
+ * Baked in at BUILD time, not read at runtime: Vite substitutes the literal
+ * into the bundle. Changing the API URL therefore needs a rebuild of the
+ * static site, not merely a redeploy of it.
+ */
 export const API_BASE = str('VITE_CIRCA_API', 'https://api.geohistory.example');
 
 /** Versioned endpoint. A breaking engine release ships as /v2 alongside /v1. */
 export const TIMELINE_PATH = str('VITE_CIRCA_TIMELINE_PATH', '/v1/timeline');
 
-export const REQUEST_TIMEOUT_MS = num('VITE_REQUEST_TIMEOUT_MS', 15_000);
+/**
+ * Liveness route, used only by the warm-up ping. Deliberately the cheapest
+ * route the API has: it returns {ok:true} without touching the database.
+ */
+export const HEALTH_PATH = str('VITE_CIRCA_HEALTH_PATH', '/v1/health');
+
+/**
+ * How long a timeline request may take before we give up on it.
+ *
+ * Raised from 15s to 45s, and the reason is hosting rather than engine speed.
+ * The API runs on a free Render instance, which sleeps after roughly 15
+ * minutes without traffic; the next request then pays a cold start of up to a
+ * minute while the container boots. A warm query answers in well under a
+ * second, so this ceiling is never approached in normal use -- it exists
+ * solely so that the first visitor after a quiet spell is not shown a failure
+ * that is not real.
+ *
+ * The warm-up ping below makes hitting this limit unlikely, but the ping can
+ * be missed entirely: a visitor who lands and submits within a few seconds,
+ * or who arrives on a slow connection, still races the boot. Both defences are
+ * needed, and neither is sufficient alone.
+ */
+export const REQUEST_TIMEOUT_MS = num('VITE_REQUEST_TIMEOUT_MS', 45_000);
+
+/**
+ * How long the warm-up ping is allowed to hang before it is abandoned.
+ *
+ * Longer than the request timeout on purpose. Nobody is waiting on this call:
+ * it runs in the background at page load, its result is discarded, and a
+ * failure is invisible. The only thing this bound prevents is an abandoned
+ * request living forever in a tab someone left open.
+ */
+export const WARMUP_TIMEOUT_MS = num('VITE_WARMUP_TIMEOUT_MS', 60_000);
 
 /* -------------------------------------------------------------------------- */
 /* CIRCA POLICY -- ours alone                                                 */
