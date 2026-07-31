@@ -2,10 +2,17 @@
 	import { createEventDispatcher, onDestroy } from 'svelte';
 	import { createPhotonProvider, createSuggester } from '$lib/geocode';
 	import { LIFE_EVENT_KINDS } from '$lib/types';
-	import type { LifeEvent, ResolvedPlace } from '$lib/types';
+	import type { LifeEvent, LifeEventKind, ResolvedPlace } from '$lib/types';
 
 	export let event: LifeEvent;
 	export let canRemove = true;
+
+	/**
+	 * Kinds already claimed by another row. Selecting them here is blocked
+	 * rather than hidden, so the list of choices does not reshuffle as rows are
+	 * added. A row never disables its own current kind.
+	 */
+	export let disabledKinds: LifeEventKind[] = [];
 
 	const dispatch = createEventDispatcher<{ remove: string }>();
 	const suggester = createSuggester(createPhotonProvider());
@@ -43,7 +50,12 @@
 <div class="row">
 	<select bind:value={event.kind} aria-label="Kind of life event">
 		{#each LIFE_EVENT_KINDS as kind (kind.value)}
-			<option value={kind.value}>{kind.label}</option>
+			<option
+				value={kind.value}
+				disabled={kind.value !== event.kind && disabledKinds.includes(kind.value)}
+			>
+				{kind.label}
+			</option>
 		{/each}
 	</select>
 
@@ -59,7 +71,14 @@
 		/>
 		{#if open && suggestions.length > 0}
 			<ul class="suggestions">
-				{#each suggestions as place (place.placeKey + place.lat + place.lng)}
+				<!--
+					Keyed by position on purpose. placeKey is city-level, so two features
+					in one city can produce an identical key and Svelte throws on
+					duplicates, killing the row until the page is reloaded. This list is
+					replaced wholesale on every response and holds no state worth
+					preserving across updates.
+				-->
+				{#each suggestions as place, index (index)}
 					<li>
 						<button type="button" on:click={() => choose(place)}>{place.name}</button>
 					</li>
