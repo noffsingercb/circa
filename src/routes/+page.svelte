@@ -1,7 +1,16 @@
 <script lang="ts">
 	import EventForm from '$lib/components/EventForm.svelte';
 	import TimelineView from '$lib/components/TimelineView.svelte';
-	import { result, status } from '$lib/session';
+	import { events, result, status } from '$lib/session';
+
+	/**
+	 * Only rows the engine actually saw are drawn on the timeline.
+	 *
+	 * deriveSegments ignores any row missing a place or a year, so those rows
+	 * had no influence on the results. Showing them anyway would imply the
+	 * history around them was searched, which it was not.
+	 */
+	$: placedLifeEvents = $events.filter((row) => row.place !== null && row.date.year !== null);
 </script>
 
 <svelte:head>
@@ -31,7 +40,7 @@
 				<h2>The timeline</h2>
 				<button type="button" class="ghost" on:click={() => window.print()}>Print</button>
 			</div>
-			<TimelineView data={$result} />
+			<TimelineView data={$result} lifeEvents={placedLifeEvents} />
 		</div>
 	{/if}
 </main>
