@@ -83,14 +83,41 @@
 		});
 	}
 
+	/**
+	 * How old the person was, in whole years, from the birth year alone.
+	 *
+	 * Deliberately coarse. Most entries carry a year and nothing else, and the
+	 * birth usually does too, so computing from full dates would produce a
+	 * number that looks exact and is not. This can be a year out either way,
+	 * which is how ages in a life story are normally spoken anyway.
+	 */
+	function ageAt(row: Row, birth: number | null): number | null {
+		if (birth === null) return null;
+		// The Born tile would read "age 0", which is technically true and looks
+		// like a mistake.
+		if (row.kind === 'life' && row.life.kind === 'birth') return null;
+		const age = row.year - birth;
+		// An event predating the birth is possible -- the engine's first segment
+		// can reach back before it -- and a negative age is worse than none.
+		return age < 0 ? null : age;
+	}
+
 	$: entries = data.entries;
 	$: rows = buildRows(entries, lifeEvents);
 	$: firstYear = rows.length ? rows[0].year : 0;
 	$: lastYear = rows.length ? rows[rows.length - 1].year : 0;
 
+	$: birthYear =
+		lifeEvents.find((event) => event.kind === 'birth' && event.date.year !== null)?.date.year ??
+		null;
+
 	// The year is printed only where it changes. Repeating it against every
 	// card in a busy decade adds noise without adding information.
 	$: yearShown = rows.map((row, index) => index === 0 || row.year !== rows[index - 1].year);
+
+	// Age follows the year: the two read as one heading over a group of cards
+	// that share a date.
+	$: ages = rows.map((row, index) => (yearShown[index] ? ageAt(row, birthYear) : null));
 </script>
 
 {#if entries.length === 0}
@@ -112,6 +139,7 @@
 			<li class="row">
 				<div class="gutter">
 					{#if yearShown[index]}<span class="year">{row.year}</span>{/if}
+					{#if ages[index] !== null}<span class="age">age {ages[index]}</span>{/if}
 				</div>
 
 				{#if row.kind === 'life'}
@@ -175,14 +203,25 @@
 	}
 
 	.gutter {
-		text-align: right;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
 		padding-top: 0.55rem;
+		line-height: 1.25;
 	}
 
 	.year {
 		font-size: 0.72rem;
 		color: var(--ink-soft);
 		font-variant-numeric: tabular-nums;
+	}
+
+	/* Quieter than the year: it is context for the card, not its date. */
+	.age {
+		font-size: 0.66rem;
+		color: #a29a8c;
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
 	}
 
 	.dot {
