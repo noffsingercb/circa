@@ -49,13 +49,19 @@ button:focus-visible {
 /*
  * Print.
  *
- * The rule of this block: on screen the layout sets its own width, on paper
- * the page box does. Anything here that fixes a width is a bug waiting to
- * scale the whole document down.
+ * Two rules govern this block.
  *
- * Selectors must match the CURRENT DOM. An earlier version of this block
- * styled .entry, .tick and .leader long after those class names were gone,
- * which is how a page-break rule can look present and do nothing at all.
+ * 1. Selectors must match the CURRENT DOM. An earlier version styled .entry,
+ *    .tick and .leader long after the timeline-layout work deleted those
+ *    names, which is how a page-break rule can look present and do nothing.
+ *
+ * 2. Do not depend on grid track sizing here. Chrome resolved .row's
+ *    minmax(0, 1fr) track to min-content in the paginated layout -- cards
+ *    printed about 100px wide, one word per line -- while the surrounding
+ *    page stayed full width. Block flow is deterministic; grid, in this
+ *    context, demonstrably is not.
+ *
+ * Everything structural is scoped to .timeline: EventRow uses .row too.
  */
 @media print {
 	:root {
@@ -70,32 +76,48 @@ button:focus-visible {
 		display: none !important;
 	}
 
-	/* Screen column, ~832px, against ~740px of paper. Let the page decide. */
+	/* On screen the layout sets its own width. On paper the page box does. */
 	main {
 		max-width: none !important;
 		padding: 0 !important;
 	}
 
-	/* Decoration that costs ink and says nothing without the interaction. */
+	/* Decoration that costs ink and carries no meaning without the hover. */
 	.rail,
 	.dot {
 		display: none !important;
 	}
 
-	/* Scoped: .row belongs to EventRow as well as TimelineView. */
+	.timeline {
+		width: 100%;
+	}
+
+	/* Gutter above the card, card across the measure. See note 2 above. */
 	.timeline .row {
+		display: block !important;
+		width: auto;
 		break-inside: avoid;
-		margin-bottom: 0.5rem;
+		margin: 0 0 0.6rem;
+	}
+
+	.timeline .gutter {
+		display: block;
+		padding: 0 0 0.2rem;
+	}
+
+	/* The two spans share a line once the gutter is no longer a flex column. */
+	.timeline .age {
+		margin-left: 0.4rem;
+	}
+
+	/* Measure is a screen-reading concern; the page margin already sets it. */
+	.timeline .body {
+		max-width: none;
 	}
 
 	.card,
 	.life-card {
 		break-inside: avoid;
 		box-shadow: none;
-	}
-
-	/* Measure is a screen-reading concern; on paper the margin already sets it. */
-	.body {
-		max-width: none;
 	}
 }
