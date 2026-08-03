@@ -43,7 +43,13 @@
 		</p>
 	</header>
 
-	<EventForm />
+	<!-- Wrapped rather than marked inside EventForm: the form has no opinion
+	     about print, this page does. On paper the controls are not part of the
+	     document, and at ~740px they would render at desktop width anyway --
+	     EventRow only stacks below 620px. -->
+	<div class="no-print">
+		<EventForm />
+	</div>
 
 	{#if $status === 'loading'}
 		<p class="working">Looking through the record…</p>
