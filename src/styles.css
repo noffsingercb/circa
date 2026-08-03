@@ -46,29 +46,56 @@ button:focus-visible {
 	outline-offset: 1px;
 }
 
+/*
+ * Print.
+ *
+ * The rule of this block: on screen the layout sets its own width, on paper
+ * the page box does. Anything here that fixes a width is a bug waiting to
+ * scale the whole document down.
+ *
+ * Selectors must match the CURRENT DOM. An earlier version of this block
+ * styled .entry, .tick and .leader long after those class names were gone,
+ * which is how a page-break rule can look present and do nothing at all.
+ */
 @media print {
 	:root {
 		--paper: #fff;
+	}
+
+	@page {
+		margin: 0.55in;
 	}
 
 	.no-print {
 		display: none !important;
 	}
 
-	.timeline {
-		height: auto !important;
+	/* Screen column, ~832px, against ~740px of paper. Let the page decide. */
+	main {
+		max-width: none !important;
+		padding: 0 !important;
 	}
 
-	.entry {
-		position: static !important;
-		break-inside: avoid;
-		margin-bottom: 0.75rem;
-	}
-
+	/* Decoration that costs ink and says nothing without the interaction. */
 	.rail,
-	.tick,
-	.dot,
-	.leader {
+	.dot {
 		display: none !important;
+	}
+
+	/* Scoped: .row belongs to EventRow as well as TimelineView. */
+	.timeline .row {
+		break-inside: avoid;
+		margin-bottom: 0.5rem;
+	}
+
+	.card,
+	.life-card {
+		break-inside: avoid;
+		box-shadow: none;
+	}
+
+	/* Measure is a screen-reading concern; on paper the margin already sets it. */
+	.body {
+		max-width: none;
 	}
 }
