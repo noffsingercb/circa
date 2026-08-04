@@ -46,29 +46,83 @@ button:focus-visible {
 	outline-offset: 1px;
 }
 
+/*
+ * Print.
+ *
+ * Two rules govern this block.
+ *
+ * 1. Selectors must match the CURRENT DOM. An earlier version styled .entry,
+ *    .tick and .leader long after the timeline-layout work deleted those
+ *    names, which is how a page-break rule can look present and do nothing.
+ *
+ * 2. Do not depend on grid track sizing here. Chrome resolved .row's
+ *    minmax(0, 1fr) track to min-content in the paginated layout -- cards
+ *    printed about 100px wide, one word per line -- while the surrounding
+ *    page stayed full width. Block flow is deterministic; grid, in this
+ *    context, demonstrably is not.
+ *
+ * Everything structural is scoped to .timeline: EventRow uses .row too.
+ */
 @media print {
 	:root {
 		--paper: #fff;
+	}
+
+	@page {
+		margin: 0.55in;
 	}
 
 	.no-print {
 		display: none !important;
 	}
 
-	.timeline {
-		height: auto !important;
+	/* On screen the layout sets its own width. On paper the page box does. */
+	main {
+		max-width: none !important;
+		padding: 0 !important;
 	}
 
-	.entry {
-		position: static !important;
-		break-inside: avoid;
-		margin-bottom: 0.75rem;
-	}
-
+	/* Decoration that costs ink and carries no meaning without the hover. */
 	.rail,
-	.tick,
-	.dot,
-	.leader {
+	.dot {
 		display: none !important;
+	}
+
+	.timeline {
+		width: 100%;
+	}
+
+	/* Cards down the measure, one block after another. See note 2 above. */
+	.timeline .row {
+		display: block !important;
+		width: auto;
+		break-inside: avoid;
+		margin: 0 0 0.6rem;
+	}
+
+	/*
+	 * The year prints in the right margin, level with the top of its card.
+	 *
+	 * Restated here rather than inherited: .gutter's own rule is identical in
+	 * specificity, so the printed page would otherwise depend on stylesheet
+	 * order. It currently does, and this is the accident that produced the
+	 * right-hand date margin -- worth keeping, not worth leaving to chance.
+	 */
+	.timeline .gutter {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		padding: 0 0 0.2rem;
+	}
+
+	/* Measure is a screen-reading concern; the page margin already sets it. */
+	.timeline .body {
+		max-width: none;
+	}
+
+	.card,
+	.life-card {
+		break-inside: avoid;
+		box-shadow: none;
 	}
 }
