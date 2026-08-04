@@ -92,7 +92,7 @@ button:focus-visible {
 		width: 100%;
 	}
 
-	/* Gutter above the card, card across the measure. See note 2 above. */
+	/* Cards down the measure, one block after another. See note 2 above. */
 	.timeline .row {
 		display: block !important;
 		width: auto;
@@ -100,14 +100,19 @@ button:focus-visible {
 		margin: 0 0 0.6rem;
 	}
 
+	/*
+	 * The year prints in the right margin, level with the top of its card.
+	 *
+	 * Restated here rather than inherited: .gutter's own rule is identical in
+	 * specificity, so the printed page would otherwise depend on stylesheet
+	 * order. It currently does, and this is the accident that produced the
+	 * right-hand date margin -- worth keeping, not worth leaving to chance.
+	 */
 	.timeline .gutter {
-		display: block;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
 		padding: 0 0 0.2rem;
-	}
-
-	/* The two spans share a line once the gutter is no longer a flex column. */
-	.timeline .age {
-		margin-left: 0.4rem;
 	}
 
 	/* Measure is a screen-reading concern; the page margin already sets it. */
