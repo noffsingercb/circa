@@ -12,6 +12,9 @@ import { ValidationError } from './types';
  * Nothing here is persisted: no cookies, no localStorage, no accounts, no
  * identifiers of any kind. A refresh loses the form, which is the intended
  * trade for asking nothing of the visitor.
+ *
+ * Share links are the one exception, and they are not persistence: the payload
+ * lives in the URL the sender chose to send. See share.ts.
  */
 
 export type Status = 'idle' | 'loading' | 'ready' | 'error';
