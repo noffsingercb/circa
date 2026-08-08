@@ -24,7 +24,7 @@ import type { LifeEvent, LifeEventKind, PlaceLevel } from './types';
  *
  * FORMAT
  *   fragment = mode char + body
- *   mode 'A' = body verbatim, 'B' = base64url(deflate-raw(body))
+ *   mode 'A' = body verbatim, 'B' = base64url(deflate(body))
  *   body     = header ~ event ~ event ...
  *   header   = version * dataset
  *   event    = kind * year * month * day * lat * lng * level * name * label
@@ -47,6 +47,16 @@ const MODE_PLAIN = 'A';
 const MODE_DEFLATE = 'B';
 const FIELD = '*';
 const RECORD = '~';
+
+/**
+ * 'deflate', not 'deflate-raw'.
+ *
+ * deflate-raw would save the 2-byte zlib header and 4-byte checksum, and every
+ * browser has supported it since 2023 -- but Node only got it in 21.2, and CI
+ * runs Node 20. Six bytes is not worth a suite that passes in the browser and
+ * fails on the runner. Both have been in Node since 18.
+ */
+const DEFLATE_FORMAT = 'deflate';
 
 /** About 110m. Reach is tens of kilometres, so this cannot move a result. */
 const COORD_DECIMALS = 3;
@@ -292,7 +302,7 @@ function fromBase64Url(text: string): Uint8Array | null {
 async function deflateToBase64Url(text: string): Promise<string | null> {
 	if (typeof CompressionStream === 'undefined') return null;
 	try {
-		const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+		const stream = new Blob([text]).stream().pipeThrough(new CompressionStream(DEFLATE_FORMAT));
 		return toBase64Url(new Uint8Array(await new Response(stream).arrayBuffer()));
 	} catch {
 		return null;
@@ -304,7 +314,7 @@ async function inflateFromBase64Url(text: string): Promise<string | null> {
 	const bytes = fromBase64Url(text);
 	if (bytes === null) return null;
 	try {
-		const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+		const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream(DEFLATE_FORMAT));
 		return await new Response(stream).text();
 	} catch {
 		return null;
