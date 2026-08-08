@@ -3,15 +3,8 @@
 	import { warmUp } from '$lib/api';
 	import EventForm from '$lib/components/EventForm.svelte';
 	import TimelineView from '$lib/components/TimelineView.svelte';
-	import {
-		decodeShare,
-		encodeShare,
-		events,
-		result,
-		status,
-		submit,
-		timelineEvents
-	} from '$lib/session';
+	import { decodeShare, encodeShare } from '$lib/share';
+	import { events, result, status, submit, timelineEvents } from '$lib/session';
 	import { distanceUnit } from '$lib/units';
 
 	/** True once this visit was opened from a shared link, for the wait message. */
@@ -42,22 +35,25 @@
 	 * form first is deliberate: the visitor watches their relative's life appear
 	 * on screen while the query is in flight, which explains both what the page
 	 * is and what it is waiting for far better than a spinner does.
+	 *
+	 * The whole body is one async IIFE because decodeShare has to inflate the
+	 * payload before it knows whether this is a shared link at all.
 	 */
 	onMount(() => {
-		const shared = decodeShare(window.location.hash);
-
-		if (shared === null) {
-			// void, not await: nothing on this page waits for it. warmUp never
-			// rejects, so there is no failure to handle -- see the contract in api.ts.
-			void warmUp();
-			return;
-		}
-
-		openedFromLink = true;
-		senderDataset = shared.datasetVersion;
-		events.set(shared.events);
-
 		void (async () => {
+			const shared = await decodeShare(window.location.hash);
+
+			if (shared === null) {
+				// void, not await: nothing on this page waits for it. warmUp never
+				// rejects, so there is no failure to handle -- see api.ts.
+				void warmUp();
+				return;
+			}
+
+			openedFromLink = true;
+			senderDataset = shared.datasetVersion;
+			events.set(shared.events);
+
 			await warmUp();
 			// One automatic request and no more. If it fails, EventForm shows the
 			// error and its own button, and the form is still filled in, so trying
@@ -79,8 +75,8 @@
 	 * Cloudflare's and Render's request logs -- a query string would write both
 	 * to two providers on every open.
 	 */
-	function openShare() {
-		const payload = encodeShare($timelineEvents, $result?.datasetVersion ?? null);
+	async function openShare() {
+		const payload = await encodeShare($timelineEvents, $result?.datasetVersion ?? null);
 		if (payload === '') return;
 
 		shareUrl = `${window.location.origin}${window.location.pathname}#${payload}`;
@@ -93,15 +89,26 @@
 	}
 
 	async function copyShare() {
+		// Selected first, so every path below leaves the visitor one Ctrl+C away
+		// from the link even if both copy attempts are refused.
+		shareInput?.select();
+
 		try {
 			await navigator.clipboard.writeText(shareUrl);
 			copyState = 'copied';
+			return;
 		} catch {
-			// writeText needs a secure context. Production is HTTPS, but local http
-			// dev is not, so this path is a normal condition rather than a bug --
-			// and the selected text above is already a working answer.
+			// Fall through to the older API rather than giving up here.
+		}
+
+		// Deprecated, and still the only thing that works outside a secure
+		// context. Note that localhost IS a secure context by spec, so this is not
+		// about local dev -- it is about a phone reaching the dev server over a
+		// LAN IP, and about older Safari, where writeText is simply absent.
+		try {
+			copyState = document.execCommand('copy') ? 'copied' : 'failed';
+		} catch {
 			copyState = 'failed';
-			shareInput?.select();
 		}
 	}
 
