@@ -1,5 +1,5 @@
 {
-	"name": "@notionhq/workers-template",
+	"name": "circa-feedback-worker",
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",
@@ -17,6 +17,6 @@
 		"typescript": "^5.8.0"
 	},
 	"dependencies": {
-		"@notionhq/workers": ">=0.0.0"
+		"@notionhq/workers": "0.8.11"
 	}
 }
