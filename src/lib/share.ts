@@ -278,14 +278,27 @@ function toBase64Url(bytes: Uint8Array): string {
 	return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-function fromBase64Url(text: string): Uint8Array | null {
+/**
+ * Returns the ArrayBuffer itself rather than a view over it.
+ *
+ * TypeScript 5.7 made Uint8Array generic in its backing buffer, so a plain
+ * Uint8Array is Uint8Array<ArrayBufferLike> -- which includes
+ * SharedArrayBuffer, while BlobPart accepts only ArrayBufferView<ArrayBuffer>.
+ * Allocating the buffer here and writing through a throwaway view keeps the
+ * concrete type all the way to the Blob with no assertion anywhere.
+ *
+ * Null rather than a throw for anything that is not base64url of the right
+ * length; a mangled link is an ordinary event, not an exception.
+ */
+function fromBase64Url(text: string): ArrayBuffer | null {
 	if (!/^[A-Za-z0-9_-]+$/.test(text)) return null;
 	const padded = text.replace(/-/g, '+').replace(/_/g, '/');
 	try {
 		const binary = atob(padded.padEnd(Math.ceil(padded.length / 4) * 4, '='));
-		const bytes = new Uint8Array(binary.length);
+		const buffer = new ArrayBuffer(binary.length);
+		const bytes = new Uint8Array(buffer);
 		for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-		return bytes;
+		return buffer;
 	} catch {
 		return null;
 	}
@@ -311,10 +324,10 @@ async function deflateToBase64Url(text: string): Promise<string | null> {
 
 async function inflateFromBase64Url(text: string): Promise<string | null> {
 	if (typeof DecompressionStream === 'undefined') return null;
-	const bytes = fromBase64Url(text);
-	if (bytes === null) return null;
+	const buffer = fromBase64Url(text);
+	if (buffer === null) return null;
 	try {
-		const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream(DEFLATE_FORMAT));
+		const stream = new Blob([buffer]).stream().pipeThrough(new DecompressionStream(DEFLATE_FORMAT));
 		return await new Response(stream).text();
 	} catch {
 		return null;
