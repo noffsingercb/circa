@@ -46,7 +46,12 @@ describe('snapshotLifeEvents', () => {
 	it('keeps only rows the engine was told about', () => {
 		const snapshot = snapshotLifeEvents([
 			event({ id: '1', kind: 'birth', date: { year: 1902, month: null, day: null } }),
-			event({ id: '2', kind: 'residence', place: null, date: { year: 1930, month: null, day: null } }),
+			event({
+				id: '2',
+				kind: 'residence',
+				place: null,
+				date: { year: 1930, month: null, day: null }
+			}),
 			event({ id: '3', kind: 'residence', date: { year: null, month: null, day: null } })
 		]);
 
