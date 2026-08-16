@@ -1,7 +1,9 @@
 <script lang="ts">
 	import EntryCard from '$lib/components/EntryCard.svelte';
 	import { isoStart } from '$lib/dates';
-	import type { CircaEntry, CircaResult, LifeEvent } from '$lib/types';
+	import { decadeOfIso } from '$lib/feedback';
+	import { segments } from '$lib/session';
+	import type { CircaEntry, CircaResult, LifeEvent, SegmentInput } from '$lib/types';
 
 	export let data: CircaResult;
 
@@ -44,6 +46,23 @@
 	function scopeClass(entry: CircaEntry): string {
 		if (entry.category === 'birth' || entry.category === 'death') return 'person';
 		return entry.scope ?? 'unknown';
+	}
+
+	/**
+	 * The decade of the life segment this entry was matched against.
+	 *
+	 * This component is the only place that can answer the question: it holds
+	 * both the entry and the segment list that entry.segmentIndex points into.
+	 * The card is given the answer rather than the means to work it out.
+	 *
+	 * Null on the embed route, where a shared timeline is rendered without the
+	 * segments that produced it. The card treats null as "not votable" and drops
+	 * its thumbs -- correct, since a vote attributed to the wrong era is worse
+	 * than no vote, and those segments belonged to whoever sent the link.
+	 */
+	function decadeFor(entry: CircaEntry, list: SegmentInput[]): string | null {
+		const segment = list[entry.segmentIndex];
+		return segment ? decadeOfIso(segment.start) : null;
 	}
 
 	/**
@@ -158,7 +177,11 @@
 				{:else}
 					<span class="dot {scopeClass(row.entry)}" aria-hidden="true"></span>
 					<div class="body">
-						<EntryCard entry={row.entry} />
+						<EntryCard
+							entry={row.entry}
+							segmentDecade={decadeFor(row.entry, $segments)}
+							datasetVersion={data.datasetVersion}
+						/>
 					</div>
 				{/if}
 			</li>
