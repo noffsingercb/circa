@@ -68,6 +68,17 @@ export const TIMELINE_PATH = str('VITE_CIRCA_TIMELINE_PATH', '/v1/timeline');
 export const HEALTH_PATH = str('VITE_CIRCA_HEALTH_PATH', '/v1/health');
 
 /**
+ * Where a thumbs vote goes.
+ *
+ * The same service as the timeline, and deliberately NOT the Notion worker
+ * directly. The worker only accepts signed requests, and signing in the
+ * browser would mean shipping the shared secret to every visitor -- at which
+ * point anyone could write rows into the feedback database at will. The API
+ * holds the secret and signs on our side of the wire.
+ */
+export const FEEDBACK_PATH = str('VITE_CIRCA_FEEDBACK_PATH', '/v1/feedback');
+
+/**
  * How long a timeline request may take before we give up on it.
  *
  * Raised from 15s to 45s, and the reason is hosting rather than engine speed.
@@ -95,9 +106,39 @@ export const REQUEST_TIMEOUT_MS = num('VITE_REQUEST_TIMEOUT_MS', 45_000);
  */
 export const WARMUP_TIMEOUT_MS = num('VITE_WARMUP_TIMEOUT_MS', 60_000);
 
+/**
+ * How long a vote POST may hang before it is abandoned.
+ *
+ * An order of magnitude shorter than a timeline request, for the opposite
+ * reason to WARMUP_TIMEOUT_MS being longer. Nobody is waiting on a vote and
+ * nothing is reported when one fails, so the only thing this bound buys is not
+ * holding a connection open behind someone who has gone back to reading. It
+ * matches the API's own FEEDBACK_FORWARD_TIMEOUT, so a request that outlives
+ * it has already been given up on at the far end.
+ *
+ * A cold instance will therefore lose votes outright, which is accepted: the
+ * first request after a sleep is spent on the timeline, and by the time anyone
+ * has read far enough down the page to judge a tile, the service is warm.
+ */
+export const FEEDBACK_TIMEOUT_MS = num('VITE_FEEDBACK_TIMEOUT_MS', 5_000);
+
 /* -------------------------------------------------------------------------- */
 /* CIRCA POLICY -- ours alone                                                 */
 /* -------------------------------------------------------------------------- */
+
+/**
+ * Which build a vote came from.
+ *
+ * Set per deployment so that feedback gathered before a scoring or dataset
+ * change can be told apart from feedback gathered after it. Without it the
+ * database is one undifferentiated pile and no before-and-after comparison is
+ * possible -- which is the only thing the feedback is for.
+ *
+ * Defaults to 'dev' rather than 'prod' deliberately: an unset variable should
+ * mark votes as untrustworthy, not launder local clicking into the production
+ * sample.
+ */
+export const BUILD_ID = str('VITE_BUILD_ID', 'dev');
 
 /**
  * When a person has a birth but no death (or a death but no birth), we assume
