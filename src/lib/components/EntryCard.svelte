@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { DEBUG } from '$lib/debug';
 	import { castVote, votedVerdict, type Verdict } from '$lib/feedback';
 	import type { CircaEntry } from '$lib/types';
 	import { distanceUnit, formatDistance } from '$lib/units';
@@ -50,15 +51,22 @@
 			? (SCOPE_LABEL[entry.scope] ?? entry.scope)
 			: 'Unclassified';
 
+	/* What the chip says: how close to this life the event happened. */
+	$: distanceLabel = formatDistance(entry.distanceKm, $distanceUnit);
+
 	/*
-	 * Both figures follow the toggle. Converting the distance and leaving the
-	 * reach in kilometres would put two units in one sentence and make the
+	 * Reach explains why the row was selected at all, which is an argument with
+	 * the scoring model rather than a question a visitor asked -- printed beside
+	 * the distance it read as noise, or worse as a second unexplained distance.
+	 * Kept rather than deleted, because it is still the fastest way to see why a
+	 * row won or lost while tuning: on the chip's title on a pointer device, and
+	 * spelled out on the chip itself under ?debug=1.
+	 *
+	 * Both figures follow the unit toggle. Converting the distance and leaving
+	 * the reach in kilometres would put two units in one sentence and make the
 	 * comparison between them meaningless, which is the whole point of the line.
 	 */
-	$: reachNote = `${formatDistance(entry.distanceKm, $distanceUnit)} of ${formatDistance(
-		entry.reachKm,
-		$distanceUnit
-	)} reach`;
+	$: reachNote = `${distanceLabel} of ${formatDistance(entry.reachKm, $distanceUnit)} reach`;
 
 	/* ---------------------------------------------------------------------- */
 	/* Feedback                                                               */
@@ -107,7 +115,17 @@
 	<div class="footer">
 		<p class="chips">
 			<span class="chip scope {scopeKey}">{scopeLabel}</span>
-			<span class="chip">{reachNote}</span>
+			<!--
+				The title carries the reach at no cost to the line. A title never
+				appears under a finger, though, and a phone is where a surprising row
+				tends to be noticed -- so ?debug=1 spells it out on the chip instead,
+				dashed, so a screenshot taken in that mode is recognisable as one.
+			-->
+			{#if DEBUG}
+				<span class="chip debug">{reachNote}</span>
+			{:else}
+				<span class="chip" title={reachNote}>{distanceLabel}</span>
+			{/if}
 			{#if entry.relaxed}
 				<span class="chip relaxed" title="Little happened nearby in this stretch, so the bar for inclusion was lowered.">
 					Wider net
@@ -286,6 +304,16 @@
 
 	.chip.scope.unknown {
 		font-style: italic;
+	}
+
+	/*
+	 * Marked as a mode rather than as content: the dashed border makes a debug
+	 * screenshot obvious at a glance, and tabular figures keep the numbers in
+	 * line with each other down the column while rows are being compared.
+	 */
+	.chip.debug {
+		border-style: dashed;
+		font-variant-numeric: tabular-nums;
 	}
 
 	/*
