@@ -3,6 +3,7 @@
 	import { warmUp } from '$lib/api';
 	import EventForm from '$lib/components/EventForm.svelte';
 	import TimelineView from '$lib/components/TimelineView.svelte';
+	import { listenForReachKey, REACH_KEY_HINT, reachArmed, showReach } from '$lib/debug';
 	import { decodeShare, encodeShare } from '$lib/share';
 	import { events, result, status, submit, timelineEvents } from '$lib/session';
 	import { distanceUnit } from '$lib/units';
@@ -60,6 +61,11 @@
 			// again is a single press the visitor chooses to make.
 			await submit();
 		})();
+
+		// Returned so the key listener is torn down with the component. The IIFE
+		// above is fired rather than awaited because onMount cannot return a
+		// cleanup function and a promise at the same time.
+		return listenForReachKey();
 	});
 
 	/**
@@ -192,6 +198,25 @@
 							mi
 						</button>
 					</div>
+					<!--
+						Absent until asked for, by Ctrl+Alt+R or by ?debug=1. It states its
+						own position rather than disappearing when switched off, so what a
+						visitor sees and what the scoring saw are one click apart instead of
+						another keystroke apart.
+					-->
+					{#if $reachArmed}
+						<div class="units debug" role="group" aria-label="Reach calculations">
+							<button
+								type="button"
+								class:active={$showReach}
+								aria-pressed={$showReach}
+								title={`Show the reach behind each row (${REACH_KEY_HINT})`}
+								on:click={() => showReach.update((on) => !on)}
+							>
+								Reach
+							</button>
+						</div>
+					{/if}
 					<!-- Here rather than in the page header because a link cannot exist
 					     before a timeline does. -->
 					<button type="button" class="ghost" on:click={openShare}>Share this timeline</button>
@@ -313,6 +338,12 @@
 	.units button.active {
 		background: var(--accent-soft);
 		color: #6d4419;
+	}
+
+	/* Echoes the dashed chip in EntryCard, so a screenshot taken with reach on
+	   is recognisable as a diagnostic view rather than as the real page. */
+	.units.debug {
+		border-style: dashed;
 	}
 
 	.working {

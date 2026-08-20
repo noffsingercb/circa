@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { DEBUG } from '$lib/debug';
+	import { showReach } from '$lib/debug';
 	import { castVote, votedVerdict, type Verdict } from '$lib/feedback';
 	import type { CircaEntry } from '$lib/types';
 	import { distanceUnit, formatDistance } from '$lib/units';
@@ -62,10 +62,10 @@
 	 * a tooltip in front of precisely the person the number confuses.
 	 *
 	 * Kept rather than deleted because it is still the fastest way to see why a
-	 * row won or lost while tuning, behind ?debug=1. Note that tuning does not
-	 * depend on this being on screen at all: feedback.ts sends reachKm, the
-	 * significance behind it and a derived headroom with every vote, so the
-	 * analysis has the figure whether or not anybody can see it.
+	 * row won or lost while tuning, so it stays one keystroke away -- see
+	 * debug.ts. Tuning does not depend on it being on screen at all: feedback.ts
+	 * sends reachKm, the significance behind it and a derived headroom with every
+	 * vote, so the analysis has the figure whether or not anybody can see it.
 	 *
 	 * Both figures follow the unit toggle. Converting the distance and leaving
 	 * the reach in kilometres would put two units in one sentence and make the
@@ -122,10 +122,10 @@
 			<span class="chip scope {scopeKey}">{scopeLabel}</span>
 			<!--
 				One number for a visitor, and no tooltip hiding a second one. Reach is
-				ours rather than theirs, so it appears only under ?debug=1, dashed, so
-				a screenshot taken in that mode is recognisable as one.
+				ours rather than theirs, so it appears only once switched on, dashed,
+				so a screenshot taken in that mode is recognisable as one.
 			-->
-			{#if DEBUG}
+			{#if $showReach}
 				<span class="chip debug">{reachNote}</span>
 			{:else}
 				<span class="chip">{distanceLabel}</span>
