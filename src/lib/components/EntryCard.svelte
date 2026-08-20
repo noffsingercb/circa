@@ -58,9 +58,14 @@
 	 * Reach explains why the row was selected at all, which is an argument with
 	 * the scoring model rather than a question a visitor asked -- printed beside
 	 * the distance it read as noise, or worse as a second unexplained distance.
-	 * Kept rather than deleted, because it is still the fastest way to see why a
-	 * row won or lost while tuning: on the chip's title on a pointer device, and
-	 * spelled out on the chip itself under ?debug=1.
+	 * It is not shown to a visitor in any form, not even as a title: a hover puts
+	 * a tooltip in front of precisely the person the number confuses.
+	 *
+	 * Kept rather than deleted because it is still the fastest way to see why a
+	 * row won or lost while tuning, behind ?debug=1. Note that tuning does not
+	 * depend on this being on screen at all: feedback.ts sends reachKm, the
+	 * significance behind it and a derived headroom with every vote, so the
+	 * analysis has the figure whether or not anybody can see it.
 	 *
 	 * Both figures follow the unit toggle. Converting the distance and leaving
 	 * the reach in kilometres would put two units in one sentence and make the
@@ -116,15 +121,14 @@
 		<p class="chips">
 			<span class="chip scope {scopeKey}">{scopeLabel}</span>
 			<!--
-				The title carries the reach at no cost to the line. A title never
-				appears under a finger, though, and a phone is where a surprising row
-				tends to be noticed -- so ?debug=1 spells it out on the chip instead,
-				dashed, so a screenshot taken in that mode is recognisable as one.
+				One number for a visitor, and no tooltip hiding a second one. Reach is
+				ours rather than theirs, so it appears only under ?debug=1, dashed, so
+				a screenshot taken in that mode is recognisable as one.
 			-->
 			{#if DEBUG}
 				<span class="chip debug">{reachNote}</span>
 			{:else}
-				<span class="chip" title={reachNote}>{distanceLabel}</span>
+				<span class="chip">{distanceLabel}</span>
 			{/if}
 			{#if entry.relaxed}
 				<span class="chip relaxed" title="Little happened nearby in this stretch, so the bar for inclusion was lowered.">
