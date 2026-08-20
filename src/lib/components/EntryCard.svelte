@@ -372,12 +372,36 @@
 	}
 
 	/*
-	 * Below the mobile breakpoint there is no hover to reveal anything with, so
-	 * the controls are simply always there.
+	 * Revealed by capability rather than by width.
+	 *
+	 * This was @media (max-width: 640px), standing in for "this is a phone", and
+	 * it stopped being true the moment the phone was turned sideways: a 390x844
+	 * device in landscape is 844px wide, so it fell through to the hover rule
+	 * above, and hover is something a finger never fires. The buttons were
+	 * present, focusable and invisible -- the worst of the three states.
+	 *
+	 * (hover: none) covers phones and tablets in either orientation, and
+	 * (pointer: coarse) also catches touchscreens that report a hover-capable
+	 * pointer alongside the touch one. Desktop keeps its hover reveal, which is
+	 * what keeps a printed-looking page free of buttons until it is being used.
 	 */
-	@media (max-width: 640px) {
+	@media (hover: none), (pointer: coarse) {
 		.thumbs {
 			opacity: 1;
+			gap: 0.25rem;
+		}
+
+		/*
+		 * Painted is not the same as visible. At 15px, #b6ac9c on white is a
+		 * hint rather than a control; --ink-soft still reads as quiet beside the
+		 * chips it shares the line with. min-width and min-height take the
+		 * button to a 44px target without growing the icon inside it, so the
+		 * pair gets easier to hit without getting louder.
+		 */
+		.thumb {
+			min-width: 2.75rem;
+			min-height: 2.75rem;
+			color: var(--ink-soft);
 		}
 	}
 
