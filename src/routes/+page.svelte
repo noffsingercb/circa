@@ -130,7 +130,7 @@
 	<title>Circa — the history around a life</title>
 	<meta
 		name="description"
-		content="Enter a few life events and see the history that reached them."
+		content="Give Circa a birth or a death and the places a life touched, and see the history that was within reach of those places at the time."
 	/>
 </svelte:head>
 
@@ -138,15 +138,16 @@
 	<header class="no-print">
 		<h1>Circa</h1>
 		<p>
-			Enter what you know of a life — where it began, where it went, where it ended — and see the
-			history that reached those places while it was being lived.
+			Circa shows you what was happening around a person’s life. Give it a birth or a death, plus
+			any places they lived, and it builds a timeline of the events that were within reach of those
+			places at the time.
 		</p>
 	</header>
 
 	<!-- Wrapped rather than marked inside EventForm: the form has no opinion
 	     about print, this page does. On paper the controls are not part of the
 	     document, and at ~740px they would render at desktop width anyway --
-	     EventRow only stacks below 620px. -->
+	     EventRow only stacks below 640px. -->
 	<div class="no-print">
 		<EventForm />
 	</div>
