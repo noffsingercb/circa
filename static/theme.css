@@ -1,0 +1,65 @@
+/*
+ * Circa theme -- the single source of truth for design tokens and base
+ * element styles.
+ *
+ * This lives in static/ rather than src/ on purpose. Anything imported from
+ * src/ is bundled and fingerprinted by Vite, which makes it impossible for a
+ * hand-written HTML file to link to reliably. Files in static/ are copied to
+ * the build root verbatim, so both the Svelte app (via src/app.html) and the
+ * plain HTML pages (/how-it-works, /resources, /faq) can reference this one
+ * file at a stable path.
+ *
+ * Change a token here and it changes everywhere. That is the entire point --
+ * the alternative was a second copy of the palette that drifts the first time
+ * a color gets adjusted.
+ *
+ * App-specific rules do not belong here. See src/styles.css for those.
+ */
+
+:root {
+	--ink: #1c1a17;
+	--ink-soft: #6b6459;
+	--line: #ddd6ca;
+	--paper: #fbf9f5;
+	--accent: #8a5a2b;
+	--accent-soft: #f0e6d8;
+	--radius: 10px;
+	--font: ui-serif, Georgia, 'Times New Roman', serif;
+	--font-ui: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	background: var(--paper);
+	color: var(--ink);
+	font-family: var(--font-ui);
+	-webkit-font-smoothing: antialiased;
+}
+
+button {
+	font: inherit;
+	cursor: pointer;
+}
+
+input,
+select {
+	font: inherit;
+	color: inherit;
+	background: #fff;
+	border: 1px solid var(--line);
+	border-radius: 6px;
+	padding: 0.45rem 0.55rem;
+}
+
+input:focus-visible,
+select:focus-visible,
+button:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
+}
