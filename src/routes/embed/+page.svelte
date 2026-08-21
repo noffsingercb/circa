@@ -15,13 +15,57 @@
 	 */
 	let root: HTMLElement;
 
+	/**
+	 * Where the height message is addressed.
+	 *
+	 * This was hardcoded to '*', which means "deliver to whatever origin happens
+	 * to be in the parent frame, and do not check". The payload here is a pixel
+	 * height, so the leak is small -- but '*' is a habit rather than a decision,
+	 * and the same line copied into a route that posts something worth having is
+	 * a real disclosure. Address it properly here and the pattern in the codebase
+	 * is the correct one.
+	 *
+	 * It CANNOT be pinned to a constant. /embed is publicly embeddable by design
+	 * (its CSP carries frame-ancestors *), so the legitimate host is unknown at
+	 * build time -- hardcoding one origin would break the documented feature for
+	 * everybody else.
+	 *
+	 * document.referrer is the parent document's URL for a framed page, so it
+	 * gives us the actual embedding origin. Where it is unavailable -- a host
+	 * sending Referrer-Policy: no-referrer, or a sandboxed frame -- we fall back
+	 * to '*', because a height message that never arrives means an iframe stuck
+	 * at its default height, and that is a worse trade for a number that is
+	 * already visible to anyone who can see the frame.
+	 */
+	let targetOrigin = '*';
+
+	function resolveTargetOrigin(): string {
+		if (typeof document === 'undefined') return '*';
+		const referrer = document.referrer;
+		if (!referrer) return '*';
+		try {
+			const url = new URL(referrer);
+			// Anything other than plain http(s) is not an origin postMessage can
+			// meaningfully target; 'null' opaque origins land here too.
+			if (url.protocol !== 'https:' && url.protocol !== 'http:') return '*';
+			return url.origin;
+		} catch {
+			return '*';
+		}
+	}
+
 	function reportHeight() {
 		if (!root || typeof window === 'undefined' || window.parent === window) return;
 		const height = Math.ceil(root.getBoundingClientRect().height) + 24;
-		window.parent.postMessage({ type: 'circa:height', height }, '*');
+		window.parent.postMessage({ type: 'circa:height', height }, targetOrigin);
 	}
 
 	onMount(() => {
+		// Resolved once, on mount, rather than per message: the parent cannot change
+		// under a live frame, and re-reading it on every resize would be work for no
+		// gain.
+		targetOrigin = resolveTargetOrigin();
+
 		reportHeight();
 		const observer = new ResizeObserver(() => reportHeight());
 		observer.observe(root);

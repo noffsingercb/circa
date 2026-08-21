@@ -3,6 +3,7 @@
 	import { castVote, votedVerdict, type Verdict } from '$lib/feedback';
 	import type { CircaEntry } from '$lib/types';
 	import { distanceUnit, formatDistance } from '$lib/units';
+	import { safeHttpUrl } from '$lib/url';
 
 	export let entry: CircaEntry;
 
@@ -50,6 +51,21 @@
 		: entry.scope
 			? (SCOPE_LABEL[entry.scope] ?? entry.scope)
 			: 'Unclassified';
+
+	/**
+	 * The source link, or null if it is not a plain http(s) URL.
+	 *
+	 * sourceUrl is dataset content: it arrives from the API, which serves it from
+	 * ~107k rows harvested out of Wikidata. Binding third-party data straight into
+	 * an href hands the browser a value it will EXECUTE for some schemes --
+	 * `javascript:` runs in this page's origin the moment somebody clicks the
+	 * title of an event. The CSP shipped with this change also blocks that, but a
+	 * header is a backstop; not emitting the attribute is the fix. See url.ts.
+	 *
+	 * Reactive rather than computed once, because the keyed each block in
+	 * TimelineView recycles cards onto different entries.
+	 */
+	$: sourceHref = safeHttpUrl(entry.sourceUrl);
 
 	/* What the chip says: how close to this life the event happened. */
 	$: distanceLabel = formatDistance(entry.distanceKm, $distanceUnit);
@@ -107,10 +123,15 @@
 			guarantees displayTitle is populated, falling back to title itself, so
 			no fallback is needed here.
 		-->
-		{#if entry.sourceUrl}
-			<a href={entry.sourceUrl} target="_blank" rel="noopener noreferrer">{entry.displayTitle}</a>
+		{#if sourceHref}
+			<a href={sourceHref} target="_blank" rel="noopener noreferrer">{entry.displayTitle}</a>
 		{:else}
-			<!-- Dump rows without a source link render as plain text rather than as a dead anchor. -->
+			<!--
+				Dump rows without a source link render as plain text rather than as a
+				dead anchor. A row whose sourceUrl failed scheme validation lands here
+				too, which is the right outcome: the title still reads, and nothing
+				unvouched-for becomes clickable.
+			-->
 			<span>{entry.displayTitle}</span>
 		{/if}
 	</h3>
