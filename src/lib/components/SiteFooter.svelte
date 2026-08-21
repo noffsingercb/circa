@@ -22,7 +22,7 @@
 -->
 <footer class="site-footer no-print">
 	<div class="inner">
-		<a href="/why-this-exists" data-sveltekit-reload>Why this exists</a>
+		<a href="/why" data-sveltekit-reload>Why this exists</a>
 		<a href="/how-it-works" data-sveltekit-reload>How this works</a>
 		<a href="/resources" data-sveltekit-reload>Resources</a>
 		<a href="/faq" data-sveltekit-reload>FAQ</a>
