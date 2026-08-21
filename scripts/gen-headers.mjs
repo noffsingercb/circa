@@ -81,8 +81,10 @@ const apiOrigin = originOf(rawApi || API_FALLBACK, 'VITE_CIRCA_API');
  *
  * - script-src 'self'         -- no inline script anywhere. Verified: app.html
  *                                carries no bootstrap script, only a referrer
- *                                meta and a stylesheet link. No 'unsafe-inline'
- *                                here, which is the directive that matters.
+ *                                meta and a stylesheet link, and none of the
+ *                                hand-written pages under static/ carry one
+ *                                either. No 'unsafe-inline' here, which is the
+ *                                directive that matters.
  * - style-src adds 'unsafe-inline' -- REQUIRED, not an oversight. Svelte injects
  *                                component styles as inline <style> blocks, and
  *                                the timeline sets computed positions as inline
@@ -90,6 +92,9 @@ const apiOrigin = originOf(rawApi || API_FALLBACK, 'VITE_CIRCA_API');
  *                                unstyled. Inline style is a defacement risk,
  *                                not a script-execution one.
  * - img-src adds data:        -- inline SVG icons and any data-URI favicon.
+ * - font-src 'self'           -- the type stack is ui-serif/ui-sans-serif and
+ *                                other system families (static/theme.css), so
+ *                                no web font is ever fetched.
  * - connect-src               -- the API and the geocoder, nothing else.
  * - frame-ancestors           -- who may embed us. The parameter to this whole
  *                                function; see below.
@@ -115,13 +120,16 @@ function csp(frameAncestors) {
 }
 
 /**
- * Shared headers.
+ * Shared headers. Emitted ONLY under /* -- see the note on rule composition
+ * below. Repeating them in the /embed rules duplicated every one of them on
+ * that route.
  *
  * Note what is NOT here: X-Frame-Options. It is superseded by CSP
- * frame-ancestors, it has no per-path override that matches what /embed needs,
- * and shipping both invites the two to disagree -- at which point browsers
- * differ on which one they honour. frame-ancestors is the single source of
- * truth for framing.
+ * frame-ancestors, and -- decisively, given how Pages composes rules -- it has
+ * no per-path override. An X-Frame-Options: DENY under /* would be inherited by
+ * /embed and would block the embed just as thoroughly as the CSP did.
+ * frame-ancestors is the single source of truth for framing because it is the
+ * only framing header that can be detached per path.
  *
  * Strict-Transport-Security is safe on pages.dev (HTTPS only, and the apex
  * already has HSTS) and will apply unchanged to a custom domain. includeSubDomains
@@ -141,38 +149,65 @@ const COMMON = [
 	'Cross-Origin-Opener-Policy: same-origin'
 ];
 
-function block(path, frameAncestors, note) {
-	const lines = [path];
-	if (note) lines.push(`  # ${note}`);
-	for (const h of COMMON) lines.push(`  ${h}`);
-	lines.push(`  Content-Security-Policy: ${csp(frameAncestors)}`);
-	return lines.join('\n');
+function rule(path, lines) {
+	return [path, ...lines.map((line) => `  ${line}`)].join('\n');
 }
 
 /**
+ * HOW CLOUDFLARE PAGES COMPOSES THESE RULES -- MEASURED, NOT ASSUMED
+ *
+ * Pages applies every rule whose path matches and CONCATENATES the results. It
+ * does not treat a more specific rule as an override. Measured against preview
+ * deployment af71183d:
+ *
+ *   GET /       -> 1 Content-Security-Policy header
+ *   GET /embed  -> 2 Content-Security-Policy headers
+ *
+ * That distinction is the whole ballgame. Under CSP, when a response carries
+ * several policies each one is enforced independently and content must satisfy
+ * all of them -- policies intersect, they do not replace. So an /embed response
+ * carrying both `frame-ancestors 'none'` and `frame-ancestors *` is NOT
+ * framable: the strictest wins. The rule intended to make /embed embeddable was
+ * doing nothing at all, and failing invisibly, since the header looks correct
+ * if you only read the second copy.
+ *
+ * Hence `! Content-Security-Policy`, which detaches the header inherited from
+ * /* so this rule's policy is the only one on the response.
+ *
  * /embed is INTENTIONALLY framable -- that is the entire feature, and the
- * README documents the host-side integration. So it gets its own rule with
- * `frame-ancestors *` rather than inheriting the site-wide denial.
+ * README documents the host-side integration. The main app is what clickjacking
+ * actually threatens (it has the form and the vote buttons) and keeps
+ * frame-ancestors 'none'. /embed has no authentication, no session, and nothing
+ * to steal a click for.
  *
- * Order matters: Cloudflare applies the later, more specific rule for a header
- * set by both. Both /embed and /embed/ are listed because the static adapter
- * serves the route at either path and a rule is matched literally.
- *
- * The main app is what clickjacking actually threatens (it has the form and the
- * vote buttons), and that keeps frame-ancestors 'none'. /embed has no
- * authentication, no session and nothing to steal a click for.
+ * Both /embed and /embed/ are listed because a rule is matched literally. The
+ * trailing-slash form 308-redirects to /embed, but it is enumerated so the
+ * redirect response is not the one place with an unintended policy.
  */
+const EMBED_RULE_LINES = [
+	'# Embeddable by design -- see README > Embedding.',
+	'# Detach the inherited site-wide policy first: Pages appends rules rather',
+	'# than overriding them, and two policies on one response intersect.',
+	'! Content-Security-Policy',
+	`Content-Security-Policy: ${csp('*')}`
+];
+
 const content = [
 	'# GENERATED FILE -- do not edit.',
 	'# Written by scripts/gen-headers.mjs during `npm run build`.',
 	'# connect-src is derived from VITE_CIRCA_API so it cannot drift from the',
 	'# API origin compiled into the bundle. Change the policy in that script.',
 	'',
-	block('/*', "'none'", 'Site-wide: framing denied.'),
+	rule('/*', [
+		'# Site-wide: framing denied. These headers are inherited by every route,',
+		'# including /embed, so they are set here once and not repeated below.',
+		...COMMON,
+		`Content-Security-Policy: ${csp("'none'")}`
+	]),
 	'',
-	block('/embed', '*', 'Embeddable by design -- see README > Embedding.'),
+	rule('/embed', EMBED_RULE_LINES),
 	'',
-	block('/embed/', '*', 'Same route, trailing slash.'),
+	rule('/embed/', EMBED_RULE_LINES),
 	''
 ].join('\n');
 
@@ -189,4 +224,4 @@ writeFileSync(outPath, content, 'utf8');
 
 console.log(`gen-headers: wrote ${outPath}`);
 console.log(`gen-headers:   connect-src 'self' ${apiOrigin} ${PHOTON_ORIGIN}`);
-console.log("gen-headers:   frame-ancestors 'none' site-wide, * on /embed");
+console.log("gen-headers:   frame-ancestors 'none' site-wide; detached and set to * on /embed");
