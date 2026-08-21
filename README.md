@@ -137,8 +137,12 @@ Two things about the hosted API are worth knowing:
 
 - **It must allow this origin.** The API refuses browser requests from any origin not in its
   `ALLOWED_ORIGIN` allowlist, and once that allowlist is set it also refuses `POST`s that arrive
-  with no `Origin` header. A healthy API plus a missing allowlist entry looks exactly like an
-  outage, so that is the first thing to check when every request fails.
+  with no `Origin` header. The allowlist is comma-separated and matched **exactly** against the
+  browser's `Origin` header, so a trailing slash or a missing scheme fails closed. Preview
+  deployments have their own hostnames and are therefore *not* allowlisted by default — a preview
+  that renders but cannot build a timeline is usually this, not a bug. A healthy API plus a missing
+  allowlist entry looks exactly like an outage, so that is the first thing to check when every
+  request fails.
 - **A free instance sleeps** after roughly 15 minutes of no traffic. `src/lib/api.ts` fires a
   single, non-blocking `GET /v1/health` on page load so the container wakes while the visitor is
   still filling in the form.
@@ -164,27 +168,64 @@ what the app does with data it did not author.
 `build/_headers` for Cloudflare Pages. **`build/_headers` is a build artifact — edit the script, not
 the output.**
 
-It is generated because the Content-Security-Policy has to name the API origin in `connect-src`, and
-that origin comes from `VITE_CIRCA_API`. A committed policy would hold a second, hand-maintained
-copy of that value, and when the two disagreed the browser would block every API call before it left
-the page — no network entry, no console request, presenting exactly like an API outage. One variable
-feeds both.
+It is generated because the policy has to describe things that are not constants. `connect-src` has
+to name the API origin, which comes from `VITE_CIRCA_API`; `script-src` has to name the hash of
+SvelteKit's inline bootstrap, which changes whenever a chunk filename changes. A committed policy
+would hold hand-maintained copies of both, and when either disagreed with reality the browser would
+block the app — silently, and in a way that looks like something else entirely. One build feeds all
+of it.
 
-The policy is `default-src 'none'` with a short allowlist: scripts and styles from this origin, the
-API and Photon on `connect-src`, `data:` images for the inline SVG icons, and `base-uri`,
-`form-action` and `object-src` denied outright.
+The policy is `default-src 'none'` with a short allowlist: scripts from this origin plus the hashed
+inline bootstrap, styles from this origin, the API and Photon on `connect-src`, `data:` images for
+the inline SVG icons, and `base-uri`, `form-action` and `object-src` denied outright.
 
-Two deliberate details:
+Three deliberate details:
 
+- **`script-src` carries `sha256-` hashes and never `'unsafe-inline'`.** `adapter-static` injects a
+  small inline bootstrap into the *generated* HTML — it sets `__sveltekit_*` and dynamically imports
+  the app chunks — so a policy of bare `script-src 'self'` refuses the one script that starts the
+  application. [`scripts/inline-script-hashes.mjs`](scripts/inline-script-hashes.mjs) scans
+  `build/**/*.html` and hashes every inline script it finds; `gen-headers.mjs` emits those hashes in
+  **every** policy it writes, including the detached `/embed` one. `'unsafe-inline'` would also have
+  worked and is the wrong trade: it permits *any* injected inline script, which is the exact thing
+  this policy exists to stop. CI fails the build if it ever appears in `script-src`.
 - **`style-src` includes `'unsafe-inline'` and has to.** Svelte injects component styles as inline
   blocks and the timeline sets computed positions as inline style attributes; without it the site
-  renders unstyled. `script-src` does **not** include it, which is the directive that matters — CI
-  fails the build if it ever appears there.
+  renders unstyled. Inline *style* is a defacement risk, not a script-execution one.
 - **`X-Frame-Options` is not sent.** The decisive reason is per-path control: it cannot be detached
   for a single route the way a CSP header can (see below), so an `X-Frame-Options: DENY` applied
   site-wide would be inherited by `/embed` and would break the embed no matter what the CSP said.
   `frame-ancestors` supersedes it in any case, and sending both invites the two to disagree — at
   which point browsers differ on which they honour.
+
+### The policy applies to build output, so it is derived from build output
+
+This is the lesson from an outage, recorded because the mistake is easy to repeat and cheap to avoid.
+
+The first version of the generator shipped `script-src 'self'` with a comment stating there was no
+inline script anywhere, "verified" against `src/app.html`. The template genuinely is clean. But the
+policy governs the built HTML, and SvelteKit puts its bootstrap there at build time. Production
+served a blank page:
+
+```
+Executing inline script violates the following Content Security Policy directive
+'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-...'),
+or a nonce is required to enable inline execution.
+```
+
+Two things about how that got through are worth keeping in mind:
+
+- **The hand-written pages under `static/` kept working.** They carry no inline script, so `/faq/`,
+  `/why/` and the rest rendered normally while the app itself did not. The site looked partly alive,
+  which is a slower thing to diagnose than an outright failure.
+- **Every header check passed.** The CI assertions and the `curl` recipe below both verify the
+  *shape* of the headers — a policy exists, `connect-src` names the API, `/embed` detaches the
+  inherited policy, shared headers appear once. All were true of the build that shipped blank. No
+  amount of header shape detects a page that never executes.
+
+So [`scripts/check-inline-hashes.mjs`](scripts/check-inline-hashes.mjs) now reads the built HTML the
+policy will govern and fails CI if any inline script in it is missing from any generated policy. It
+fails on the artifact, not on a description of the artifact.
 
 ### Cloudflare Pages appends rules, it does not override them
 
@@ -204,10 +245,13 @@ replace. So an `/embed` response carrying both `frame-ancestors 'none'` from `/*
 the embed work did nothing, and it failed invisibly, because the header looks correct if you read
 only the second copy.
 
-Two consequences, both now enforced in CI:
+Three consequences, all now enforced in CI:
 
 - The `/embed` rules emit `! Content-Security-Policy` to **detach** the inherited policy before
   setting their own, so exactly one policy reaches the browser.
+- Because that policy is standalone, it needs its own copy of everything the site-wide policy has —
+  the inline script hashes included. A hash present only under `/*` would leave the embed blank
+  while the file still looked correct.
 - The shared headers (HSTS, COOP, `Referrer-Policy`, `X-Content-Type-Options`,
   `Permissions-Policy`) are declared under `/*` **once** and inherited everywhere. Repeating them
   per-rule duplicated all of them on `/embed` and collapsed HSTS into the malformed value
@@ -236,15 +280,20 @@ or absent on a dev server, and the fix is not emitting the attribute in the firs
 
 ### Checking it
 
-Count the policies, do not just look for the directive. A single grep for `frame-ancestors *`
-passed on the broken file described above, because the string was present — in the second of two
+**Load the site in a browser with the console open. Do this first.** Header checks cannot tell you
+whether the page runs, and the one time that distinction mattered it cost a production outage. A
+clean console and a rendered timeline are the actual pass condition; everything below is
+supplementary.
+
+Then count the policies — do not just look for the directive. A single grep for `frame-ancestors *`
+passed on the broken file described above, because the string was present, in the second of two
 policies that the browser was intersecting away.
 
 ```bash
 for p in / /embed; do
   echo "== $p"
   curl -sSI "https://circa-2cg.pages.dev$p" | grep -ci '^content-security-policy'
-  curl -sSI "https://circa-2cg.pages.dev$p" | grep -i -e frame-ancestors -e strict-transport
+  curl -sSI "https://circa-2cg.pages.dev$p" | grep -i -e frame-ancestors -e strict-transport -e sha256
 done
 ```
 
@@ -255,16 +304,17 @@ foreach ($p in @('/', '/embed')) {
     "== $p"
     $raw = curl.exe -sSI "https://circa-2cg.pages.dev$p"
     ($raw | Select-String '^content-security-policy' -CaseSensitive:$false).Count
-    $raw | Select-String 'frame-ancestors|strict-transport' -CaseSensitive:$false
+    $raw | Select-String 'frame-ancestors|strict-transport|sha256' -CaseSensitive:$false
 }
 ```
 
 Both paths must report **exactly one** policy: `/` with `frame-ancestors 'none'`, `/embed` with
-`frame-ancestors *`. Anything other than `1` means the rules are composing differently than this
-section assumes, and the embed is the first thing that will break. CI asserts the same invariants
-against the generated file on every pull request, including the detach line and a one-occurrence
-check on each shared header, so a build that silently regresses fails there rather than in
-production.
+`frame-ancestors *`, and both carrying at least one `sha256-` source in `script-src`. Anything other
+than `1` means the rules are composing differently than this section assumes, and the embed is the
+first thing that will break. A policy with no hash means the inline bootstrap is unpermitted and the
+app will render blank. CI asserts the same invariants against the generated file on every pull
+request — the detach line, a one-occurrence check on each shared header, and a hash for every inline
+script in the build — so a build that silently regresses fails there rather than in production.
 
 ---
 
@@ -365,6 +415,8 @@ src/lib/components/          form rows, timeline, entry cards
 src/routes/+page.svelte      the full page
 src/routes/embed/            chromeless build for iframing
 scripts/gen-headers.mjs      generates build/_headers at build time
+scripts/inline-script-hashes.mjs   hashes the inline scripts the build emitted
+scripts/check-inline-hashes.mjs    CI: every inline script is hashed in every policy
 static/                      public pages (why, how it works, resources, FAQ) + theme
 tests/                       segment derivation, geocoding, sharing, sessions, URL allowlist
 ```
@@ -384,8 +436,13 @@ reach diagnostics above.
 
 Deployed at [circa-2cg.pages.dev](https://circa-2cg.pages.dev/) on Cloudflare Pages.
 
-Not yet: a domain of its own. When one is registered, add it to the API's `ALLOWED_ORIGIN` — the
-CSP needs no edit, since `connect-src` names the API rather than this site.
+Not yet: the move to `circatimeline.org`, which is registered but not yet serving. When it is, add
+it to the API's `ALLOWED_ORIGIN` (comma-separated, exact match) and update the hostnames in the
+verification recipes above. The CSP itself needs no edit: `connect-src` names the API rather than
+this site, `frame-ancestors` is origin-independent, and `paths: { relative: true }` in
+`svelte.config.js` means the bundle carries no absolute self-references. Note that HSTS with
+`includeSubDomains` commits a new apex to HTTPS for a year on the first request a browser makes to
+it; that is intended, but it is why `preload` is not sent.
 
 ---
 
