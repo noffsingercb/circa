@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { showReach } from '$lib/debug';
 	import { castVote, votedVerdict, type Verdict } from '$lib/feedback';
 	import type { CircaEntry } from '$lib/types';
 	import { distanceUnit, formatDistance } from '$lib/units';
@@ -50,15 +51,27 @@
 			? (SCOPE_LABEL[entry.scope] ?? entry.scope)
 			: 'Unclassified';
 
+	/* What the chip says: how close to this life the event happened. */
+	$: distanceLabel = formatDistance(entry.distanceKm, $distanceUnit);
+
 	/*
-	 * Both figures follow the toggle. Converting the distance and leaving the
-	 * reach in kilometres would put two units in one sentence and make the
+	 * Reach explains why the row was selected at all, which is an argument with
+	 * the scoring model rather than a question a visitor asked -- printed beside
+	 * the distance it read as noise, or worse as a second unexplained distance.
+	 * It is not shown to a visitor in any form, not even as a title: a hover puts
+	 * a tooltip in front of precisely the person the number confuses.
+	 *
+	 * Kept rather than deleted because it is still the fastest way to see why a
+	 * row won or lost while tuning, so it stays one keystroke away -- see
+	 * debug.ts. Tuning does not depend on it being on screen at all: feedback.ts
+	 * sends reachKm, the significance behind it and a derived headroom with every
+	 * vote, so the analysis has the figure whether or not anybody can see it.
+	 *
+	 * Both figures follow the unit toggle. Converting the distance and leaving
+	 * the reach in kilometres would put two units in one sentence and make the
 	 * comparison between them meaningless, which is the whole point of the line.
 	 */
-	$: reachNote = `${formatDistance(entry.distanceKm, $distanceUnit)} of ${formatDistance(
-		entry.reachKm,
-		$distanceUnit
-	)} reach`;
+	$: reachNote = `${distanceLabel} of ${formatDistance(entry.reachKm, $distanceUnit)} reach`;
 
 	/* ---------------------------------------------------------------------- */
 	/* Feedback                                                               */
@@ -107,7 +120,16 @@
 	<div class="footer">
 		<p class="chips">
 			<span class="chip scope {scopeKey}">{scopeLabel}</span>
-			<span class="chip">{reachNote}</span>
+			<!--
+				One number for a visitor, and no tooltip hiding a second one. Reach is
+				ours rather than theirs, so it appears only once switched on, dashed,
+				so a screenshot taken in that mode is recognisable as one.
+			-->
+			{#if $showReach}
+				<span class="chip debug">{reachNote}</span>
+			{:else}
+				<span class="chip">{distanceLabel}</span>
+			{/if}
 			{#if entry.relaxed}
 				<span class="chip relaxed" title="Little happened nearby in this stretch, so the bar for inclusion was lowered.">
 					Wider net
@@ -289,6 +311,16 @@
 	}
 
 	/*
+	 * Marked as a mode rather than as content: the dashed border makes a debug
+	 * screenshot obvious at a glance, and tabular figures keep the numbers in
+	 * line with each other down the column while rows are being compared.
+	 */
+	.chip.debug {
+		border-style: dashed;
+		font-variant-numeric: tabular-nums;
+	}
+
+	/*
 	 * Hidden by opacity, NOT by display or visibility.
 	 *
 	 * A display:none button is not in the tab order at all, so a keyboard
@@ -372,12 +404,36 @@
 	}
 
 	/*
-	 * Below the mobile breakpoint there is no hover to reveal anything with, so
-	 * the controls are simply always there.
+	 * Revealed by capability rather than by width.
+	 *
+	 * This was @media (max-width: 640px), standing in for "this is a phone", and
+	 * it stopped being true the moment the phone was turned sideways: a 390x844
+	 * device in landscape is 844px wide, so it fell through to the hover rule
+	 * above, and hover is something a finger never fires. The buttons were
+	 * present, focusable and invisible -- the worst of the three states.
+	 *
+	 * (hover: none) covers phones and tablets in either orientation, and
+	 * (pointer: coarse) also catches touchscreens that report a hover-capable
+	 * pointer alongside the touch one. Desktop keeps its hover reveal, which is
+	 * what keeps a printed-looking page free of buttons until it is being used.
 	 */
-	@media (max-width: 640px) {
+	@media (hover: none), (pointer: coarse) {
 		.thumbs {
 			opacity: 1;
+			gap: 0.25rem;
+		}
+
+		/*
+		 * Painted is not the same as visible. At 15px, #b6ac9c on white is a
+		 * hint rather than a control; --ink-soft still reads as quiet beside the
+		 * chips it shares the line with. min-width and min-height take the
+		 * button to a 44px target without growing the icon inside it, so the
+		 * pair gets easier to hit without getting louder.
+		 */
+		.thumb {
+			min-width: 2.75rem;
+			min-height: 2.75rem;
+			color: var(--ink-soft);
 		}
 	}
 

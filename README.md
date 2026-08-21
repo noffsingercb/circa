@@ -137,6 +137,48 @@ purpose. Only shapes are duplicated, never logic.
 
 ---
 
+## Diagnostics
+
+Every row on a timeline is there because the event's own `reach_km` covered the segment's point. The
+chip on each card shows only the distance, because reach is an argument with the scoring model rather
+than an answer to anything a visitor asked — printed beside the distance it reads as a second,
+unexplained distance.
+
+Reach is one keystroke away when you want it:
+
+| How | Where |
+| --- | --- |
+| **Ctrl+Alt+R** | Any timeline on screen. Toggles live, no reload |
+| **`?debug=1`** | On load. Goes before the `#`, since the share payload owns the fragment |
+
+Once either has fired, a **`Reach`** toggle appears beside the km/mi pair and stays for the rest of
+the session, stating its own position — so a visitor's view of a row and the scored view are one
+click apart. Chips are dashed while reach is showing, so a screenshot taken in that mode is
+recognisable as a diagnostic one rather than as the real page.
+
+`?debug=1` is the path on a phone, where there is no key combination to press. It also survives in a
+bookmark or in a share link, which is how to hand somebody else a timeline with the scoring already
+visible.
+
+**It is not persisted.** [`src/lib/debug.ts`](src/lib/debug.ts) keeps it in memory like everything
+else here, so it dies with the tab. A sticky debug flag would be the first thing to break the promise
+at the top of this file, and leaving it switched on for the next visitor would be a strange thing to
+do to them.
+
+### Reach reaches the analysis whether or not it is on screen
+
+Nothing about the display affects tuning. Every thumbs up or down sends the full-precision `reachKm`,
+the `significance` behind it, and a derived `headroom` — how much of the event's reach was left over
+at that distance, where `0.0` means the row scraped in at the very edge. See
+[`src/lib/feedback.ts`](src/lib/feedback.ts) for the whole payload and, more to the point, for the
+list of things it will never send.
+
+Distance arrives **bucketed** rather than exact, in nine buckets that straddle the 1500 km national
+scopeBase on purpose. That is deliberate: enough to tune a reach curve against, not enough to locate
+anybody.
+
+---
+
 ## Embedding
 
 Build, host the `build/` directory anywhere static, and iframe the `/embed` route. It renders the
@@ -177,6 +219,10 @@ src/lib/segments.ts          life events -> engine segments  [the only Circa-own
 src/lib/geocode.ts           Photon lookup, debounce, place identity
 src/lib/api.ts               engine client + sparsity retry
 src/lib/session.ts           in-memory app state
+src/lib/units.ts             km/mi toggle and distance formatting
+src/lib/share.ts             timeline <-> URL fragment payload
+src/lib/feedback.ts          thumbs up/down vote payload
+src/lib/debug.ts             reach visibility (Ctrl+Alt+R, ?debug=1)
 src/lib/components/          form rows, timeline, entry cards
 src/routes/+page.svelte      the full page
 src/routes/embed/            chromeless build for iframing
@@ -188,9 +234,10 @@ tests/                       segment derivation, geocoding
 ## Status
 
 v0.1 MVP. Working: the row editor, loose place lookup, segment derivation, the engine client with
-its sparsity backstop, the year-scaled timeline, reset, print, and the embed route.
+its sparsity backstop, the year-scaled timeline, reset, print, the embed route, shareable links,
+thumbs up/down relevance feedback, and the reach diagnostics above.
 
-Not yet: thumbs up/down relevance feedback, and a deployed API to point at.
+Not yet: the public pages (how it works, resources, an FAQ) and a domain of its own.
 
 ---
 

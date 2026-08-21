@@ -91,9 +91,38 @@
 	</div>
 
 	<div class="date">
-		<input type="number" bind:value={event.date.year} placeholder="Year" aria-label="Year" min="1" max="2200" />
-		<input type="number" bind:value={event.date.month} placeholder="Mo" aria-label="Month" min="1" max="12" />
-		<input type="number" bind:value={event.date.day} placeholder="Day" aria-label="Day" min="1" max="31" />
+		<!--
+			inputmode alongside type="number": the type is what keeps the value
+			numeric and the min/max meaningful, the inputmode is what actually
+			gets a keypad rather than a full keyboard on Android.
+		-->
+		<input
+			type="number"
+			inputmode="numeric"
+			bind:value={event.date.year}
+			placeholder="Year"
+			aria-label="Year"
+			min="1"
+			max="2200"
+		/>
+		<input
+			type="number"
+			inputmode="numeric"
+			bind:value={event.date.month}
+			placeholder="Mo"
+			aria-label="Month"
+			min="1"
+			max="12"
+		/>
+		<input
+			type="number"
+			inputmode="numeric"
+			bind:value={event.date.day}
+			placeholder="Day"
+			aria-label="Day"
+			min="1"
+			max="31"
+		/>
 	</div>
 
 	<button
@@ -108,15 +137,32 @@
 </div>
 
 <style>
+	/*
+	 * Four named areas, and every child placed into one.
+	 *
+	 * The stacked layout at the bottom of this file reorders these controls,
+	 * and named areas are the readable way to say so. They are also inert on
+	 * their own: grid-template-areas without a matching grid-area on each child
+	 * places nothing. That was the bug -- the stacked rule named its areas,
+	 * assigned none of them, and the children auto-placed in source order into
+	 * a 1fr/2rem grid, which put the place input in the remove-button lane at
+	 * roughly 32px wide and its suggestion list along with it.
+	 */
 	.row {
 		display: grid;
 		grid-template-columns: 9rem minmax(12rem, 1fr) auto 2rem;
+		grid-template-areas: 'kind place date remove';
 		gap: 0.5rem;
 		align-items: start;
 		margin-bottom: 0.6rem;
 	}
 
+	select {
+		grid-area: kind;
+	}
+
 	.place {
+		grid-area: place;
 		position: relative;
 	}
 
@@ -125,6 +171,7 @@
 	}
 
 	.date {
+		grid-area: date;
 		display: grid;
 		grid-template-columns: 5rem 3.5rem 3.5rem;
 		gap: 0.35rem;
@@ -166,6 +213,7 @@
 	}
 
 	.remove {
+		grid-area: remove;
 		border: 1px solid var(--line);
 		background: #fff;
 		border-radius: 6px;
@@ -178,10 +226,66 @@
 		cursor: not-allowed;
 	}
 
-	@media (max-width: 620px) {
+	/*
+	 * Stacked, one field per line.
+	 *
+	 * 640px rather than 620px, matching EntryCard so the app has one mobile
+	 * breakpoint instead of two that disagree. The four-column row's own
+	 * minimum is 9 + 12 + 12.7 + 2rem plus three 0.5rem gaps, about 595px, and
+	 * main adds 1.25rem of padding either side -- so it needs about 635px of
+	 * viewport and has to be gone before then. At 620px it was not, and the row
+	 * overflowed sideways for the fifteen pixels in between.
+	 */
+	@media (max-width: 640px) {
 		.row {
-			grid-template-columns: 1fr 2rem;
-			grid-template-areas: 'kind remove' 'place place' 'date date';
+			grid-template-columns: minmax(0, 1fr) 2.75rem;
+			grid-template-areas:
+				'kind remove'
+				'place place'
+				'date date';
+			gap: 0.4rem 0.5rem;
+			margin-bottom: 1.1rem;
+		}
+
+		/*
+		 * The date fields spend the width stacking just freed instead of
+		 * huddling at the left in fixed tracks. Year keeps the larger share: it
+		 * is the only one of the three that takes four digits, and the only one
+		 * most visitors fill in.
+		 */
+		.date {
+			grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+		}
+
+		/*
+		 * 44px targets. Every control here is hit with a thumb, and the place
+		 * suggestions are hit with the keyboard already open.
+		 */
+		select,
+		.place input,
+		.date input {
+			min-height: 2.75rem;
+		}
+
+		.remove {
+			height: 2.75rem;
+			font-size: 1.15rem;
+		}
+
+		.suggestions button {
+			padding: 0.7rem 0.6rem;
+		}
+
+		/*
+		 * The list opens downward into the on-screen keyboard, so it is capped
+		 * and scrolls rather than running underneath it. It is deliberately not
+		 * flipped above the input: that needs live measurement against the
+		 * visual viewport, which is worth writing only with a device in hand.
+		 */
+		.suggestions {
+			max-height: 40vh;
+			overflow-y: auto;
+			overscroll-behavior: contain;
 		}
 	}
 </style>
