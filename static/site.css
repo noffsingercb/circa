@@ -1,0 +1,165 @@
+/*
+ * Page chrome and prose styles for the hand-written pages in static/.
+ *
+ * theme.css owns the tokens and the base element styles and is shared with
+ * the app. This file is loaded only by the static pages, which need a prose
+ * column, a small header and a footer -- none of which the app has any use
+ * for, and none of which should be paid for by the app's visitors.
+ *
+ * The footer rules here are deliberately duplicated in
+ * src/lib/components/SiteFooter.svelte, because Svelte scopes a component's
+ * styles and a plain HTML file cannot reach them. Keeping the two in sync by
+ * hand is the accepted cost of not building a shared component system for
+ * four pages. If they drift somewhere visible, that is the signal to
+ * reconsider -- not before.
+ */
+
+.site-header {
+	max-width: 46rem;
+	margin: 0 auto;
+	padding: 2.25rem 1.25rem 0;
+}
+
+/*
+ * The wordmark is the way back into the app, and on these pages it is the
+ * only way back. It is a link rather than a heading: every one of these pages
+ * has its own h1 below, and two competing headings would be a worse document
+ * outline than none.
+ */
+.wordmark {
+	font-family: var(--font);
+	font-size: 1.35rem;
+	color: var(--ink);
+	text-decoration: none;
+	letter-spacing: -0.01em;
+}
+
+.wordmark:hover {
+	color: var(--accent);
+}
+
+.prose {
+	max-width: 46rem;
+	margin: 0 auto;
+	padding: 1.5rem 1.25rem 4rem;
+	line-height: 1.65;
+}
+
+.prose h1 {
+	font-family: var(--font);
+	font-size: 2.1rem;
+	line-height: 1.2;
+	letter-spacing: -0.01em;
+	margin: 0.75rem 0 0.5rem;
+}
+
+/*
+ * The sentence under the h1 that says what the page is for. Larger than body
+ * text and lighter, so the page announces itself before it starts explaining.
+ */
+.lede {
+	font-size: 1.05rem;
+	color: var(--ink-soft);
+	margin: 0 0 2.25rem;
+}
+
+.prose h2 {
+	font-family: var(--font);
+	font-size: 1.3rem;
+	margin: 2.5rem 0 0.6rem;
+}
+
+.prose h3 {
+	font-family: var(--font-ui);
+	font-size: 1rem;
+	margin: 1.75rem 0 0.4rem;
+}
+
+.prose p,
+.prose li {
+	max-width: 40rem;
+}
+
+.prose a {
+	color: var(--accent);
+}
+
+.prose ul {
+	padding-left: 1.1rem;
+}
+
+.prose li {
+	margin-bottom: 0.4rem;
+}
+
+.prose dt {
+	font-weight: 600;
+	margin-top: 1.25rem;
+}
+
+.prose dd {
+	margin: 0.3rem 0 0;
+	max-width: 40rem;
+}
+
+/*
+ * An aside that is worth reading but is not the argument of the page. Marked
+ * with a rule on the leading edge rather than a tinted box, so it stays
+ * legible on paper and does not compete with the accent colour.
+ */
+.note {
+	border-left: 2px solid var(--line);
+	padding: 0.1rem 0 0.1rem 0.9rem;
+	color: var(--ink-soft);
+	font-size: 0.92rem;
+	margin: 1.25rem 0;
+	max-width: 40rem;
+}
+
+.site-footer {
+	border-top: 1px solid var(--line);
+	margin-top: 2rem;
+	padding: 1.5rem 1.25rem 3rem;
+}
+
+.site-footer .inner {
+	max-width: 46rem;
+	margin: 0 auto;
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 0.5rem 1.25rem;
+	font-size: 0.85rem;
+}
+
+.site-footer a {
+	color: var(--ink-soft);
+}
+
+.site-footer a:hover {
+	color: var(--accent);
+}
+
+.site-footer .spacer {
+	flex: 1;
+}
+
+.site-footer .who {
+	color: var(--ink-soft);
+}
+
+/*
+ * Below this the footer links stack rather than wrapping mid-row, which reads
+ * as a list of destinations instead of a broken line. Matches the 640px
+ * breakpoint the app already uses; a second, disagreeing breakpoint is worse
+ * than a slightly imperfect one.
+ */
+@media (max-width: 640px) {
+	.site-footer .inner {
+		flex-direction: column;
+	}
+
+	.site-footer .spacer {
+		display: none;
+	}
+}
