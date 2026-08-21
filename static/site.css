@@ -1,0 +1,259 @@
+/*
+ * Page chrome and prose styles for the hand-written pages in static/.
+ *
+ * theme.css owns the tokens and the base element styles and is shared with
+ * the app. This file is loaded only by the static pages, which need a prose
+ * column, a small header and a footer -- none of which the app has any use
+ * for, and none of which should be paid for by the app's visitors.
+ *
+ * The footer rules here are deliberately duplicated in
+ * src/lib/components/SiteFooter.svelte, because Svelte scopes a component's
+ * styles and a plain HTML file cannot reach them. Keeping the two in sync by
+ * hand is the accepted cost of not building a shared component system for
+ * five pages. If they drift somewhere visible, that is the signal to
+ * reconsider -- not before.
+ */
+
+.site-header {
+	max-width: 46rem;
+	margin: 0 auto;
+	padding: 2.25rem 1.25rem 0;
+}
+
+/*
+ * The wordmark is the way back into the app, and on these pages it is the
+ * only way back. It is a link rather than a heading: every one of these pages
+ * has its own h1 below, and two competing headings would be a worse document
+ * outline than none.
+ */
+.wordmark {
+	font-family: var(--font);
+	font-size: 1.35rem;
+	color: var(--ink);
+	text-decoration: none;
+	letter-spacing: -0.01em;
+}
+
+.wordmark:hover {
+	color: var(--accent);
+}
+
+.prose {
+	max-width: 46rem;
+	margin: 0 auto;
+	padding: 1.5rem 1.25rem 4rem;
+	line-height: 1.65;
+}
+
+.prose h1 {
+	font-family: var(--font);
+	font-size: 2.1rem;
+	line-height: 1.2;
+	letter-spacing: -0.01em;
+	margin: 0.75rem 0 0.5rem;
+}
+
+/*
+ * The sentence under the h1 that says what the page is for. Larger than body
+ * text and lighter, so the page announces itself before it starts explaining.
+ */
+.lede {
+	font-size: 1.05rem;
+	color: var(--ink-soft);
+	margin: 0 0 2.25rem;
+}
+
+.prose h2 {
+	font-family: var(--font);
+	font-size: 1.3rem;
+	margin: 2.5rem 0 0.6rem;
+}
+
+.prose h3 {
+	font-family: var(--font-ui);
+	font-size: 1rem;
+	margin: 1.75rem 0 0.4rem;
+}
+
+.prose p,
+.prose li {
+	max-width: 40rem;
+}
+
+.prose a {
+	color: var(--accent);
+}
+
+.prose ul {
+	padding-left: 1.1rem;
+}
+
+.prose li {
+	margin-bottom: 0.4rem;
+}
+
+.prose dt {
+	font-weight: 600;
+	margin-top: 1.25rem;
+}
+
+.prose dd {
+	margin: 0.3rem 0 0;
+	max-width: 40rem;
+}
+
+/*
+ * An aside that is worth reading but is not the argument of the page. Marked
+ * with a rule on the leading edge rather than a tinted box, so it stays
+ * legible on paper and does not compete with the accent colour.
+ */
+.note {
+	border-left: 2px solid var(--line);
+	padding: 0.1rem 0 0.1rem 0.9rem;
+	color: var(--ink-soft);
+	font-size: 0.92rem;
+	margin: 1.25rem 0;
+	max-width: 40rem;
+}
+
+/* -------------------------------------------------------------------------- */
+/* FAQ disclosures                                                            */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Built on <details>/<summary>. The caret is drawn in CSS on the trailing
+ * edge, which means the default browser triangle has to be suppressed twice:
+ * list-style for the standards path, and ::-webkit-details-marker for older
+ * WebKit, which ignores the first.
+ */
+
+/* Restores the gap the .lede used to hold open on this page. */
+.prose h1 + .qa {
+	margin-top: 1.75rem;
+	border-top: 1px solid var(--line);
+}
+
+.qa {
+	border-bottom: 1px solid var(--line);
+	max-width: 40rem;
+}
+
+.qa summary {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1.25rem;
+	padding: 0.95rem 0.15rem;
+	cursor: pointer;
+	font-family: var(--font);
+	font-size: 1.05rem;
+	line-height: 1.4;
+	list-style: none;
+}
+
+.qa summary::-webkit-details-marker {
+	display: none;
+}
+
+/*
+ * Two borders on a rotated square: the standard chevron, and the only version
+ * that inherits colour and scales with the text rather than shipping an icon
+ * font or an SVG for one glyph. flex: none keeps it from being squeezed by a
+ * long question.
+ */
+.qa summary::after {
+	content: '';
+	flex: none;
+	width: 0.45rem;
+	height: 0.45rem;
+	margin-right: 0.2rem;
+	border-right: 2px solid var(--ink-soft);
+	border-bottom: 2px solid var(--ink-soft);
+	transform: rotate(45deg);
+	transition: transform 120ms ease;
+}
+
+.qa[open] summary::after {
+	transform: rotate(-135deg);
+}
+
+.qa summary:hover {
+	color: var(--accent);
+}
+
+.qa summary:hover::after {
+	border-color: var(--accent);
+}
+
+.qa .answer {
+	padding: 0 0.15rem 1.15rem;
+}
+
+/* The summary already supplies the space above and below the answer, so the
+   first and last paragraphs must not add their own. */
+.qa .answer > :first-child {
+	margin-top: 0;
+}
+
+.qa .answer > :last-child {
+	margin-bottom: 0;
+}
+
+/*
+ * On paper, every answer. A printed FAQ showing seven questions and no
+ * answers is a broken document, and print is exactly where nobody can click
+ * to open them.
+ */
+@media print {
+	.qa .answer {
+		display: block;
+	}
+
+	.qa summary::after {
+		display: none;
+	}
+}
+
+.site-footer {
+	border-top: 1px solid var(--line);
+	margin-top: 2rem;
+	padding: 1.5rem 1.25rem 3rem;
+}
+
+.site-footer .inner {
+	max-width: 46rem;
+	margin: 0 auto;
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 0.5rem 1.25rem;
+	font-size: 0.85rem;
+}
+
+.site-footer a {
+	color: var(--ink-soft);
+}
+
+.site-footer a:hover {
+	color: var(--accent);
+}
+
+.site-footer .spacer {
+	flex: 1;
+}
+
+/*
+ * Below this the footer links stack rather than wrapping mid-row, which reads
+ * as a list of destinations instead of a broken line. Matches the 640px
+ * breakpoint the app already uses; a second, disagreeing breakpoint is worse
+ * than a slightly imperfect one.
+ */
+@media (max-width: 640px) {
+	.site-footer .inner {
+		flex-direction: column;
+	}
+
+	.site-footer .spacer {
+		display: none;
+	}
+}

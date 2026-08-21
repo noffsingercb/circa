@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { warmUp } from '$lib/api';
 	import EventForm from '$lib/components/EventForm.svelte';
+	import SiteFooter from '$lib/components/SiteFooter.svelte';
 	import TimelineView from '$lib/components/TimelineView.svelte';
 	import { listenForReachKey, REACH_KEY_HINT, reachArmed, showReach } from '$lib/debug';
 	import { decodeShare, encodeShare } from '$lib/share';
@@ -24,8 +25,8 @@
 	 *
 	 * The service sleeps on the free tier after about 15 minutes of quiet, and
 	 * booting it can take up to a minute. Anyone filling in this form needs at
-	 * least a name, a place and a date first, so the boot overlaps with work the
-	 * visitor was going to do anyway and is usually invisible.
+	 * least a place and a date first, so the boot overlaps with work the visitor
+	 * was going to do anyway and is usually invisible.
 	 *
 	 * onMount rather than module scope: this must not run during the prerender
 	 * that adapter-static does at build time, where there is no visitor to warm
@@ -77,9 +78,9 @@
 	 * has never seen.
 	 *
 	 * The payload goes after the '#'. Fragments are not transmitted to the
-	 * server, so a named person's birth date and birthplace stay out of
-	 * Cloudflare's and Render's request logs -- a query string would write both
-	 * to two providers on every open.
+	 * server, so the places and dates in the form stay out of Cloudflare's and
+	 * Render's request logs -- a query string would write both to two providers
+	 * on every open.
 	 */
 	async function openShare() {
 		const payload = await encodeShare($timelineEvents, $result?.datasetVersion ?? null);
@@ -143,10 +144,28 @@
 <main>
 	<header class="no-print">
 		<h1>Circa</h1>
-		<p>
+		<p class="intro">
 			Circa shows you what was happening around a person’s life. Give it a birth or a death, plus
 			any places they lived, and it builds a timeline of the events that were within reach of those
 			places at the time.
+		</p>
+		<!--
+			Stated once, up here, because the question it answers arrives before the
+			form is filled in rather than after. Short on purpose: the detail lives
+			in the FAQ, and spelling it out at length here would imply there is
+			something to disclose.
+		-->
+		<p class="privacy">
+			Circa doesn’t ask who you’re looking up. No accounts, no names, no sign-in.
+			<a
+				class="why"
+				href="/faq"
+				data-sveltekit-reload
+				title="A place and a date are all Circa needs. There is no name field, nothing is saved, and no account exists to tie a search to. Read more in the FAQ."
+				aria-label="Why Circa asks for so little — read the FAQ"
+			>
+				?
+			</a>
 		</p>
 	</header>
 
@@ -238,6 +257,12 @@
 	{/if}
 </main>
 
+<!-- Outside main, so it sits below the page's own bottom padding rather than
+     inside the reading column. Not added to the embed route: that build is
+     chromeless by design and is being iframed into someone else's page, where
+     navigation belongs to the host and not to us. -->
+<SiteFooter />
+
 <!-- One <dialog>, no library. Escape closes it and focus returns to the Share
      button natively; a hand-rolled overlay would have to reimplement both. -->
 <dialog bind:this={shareDialog} class="share no-print" on:close={() => (copyState = 'idle')}>
@@ -280,6 +305,41 @@
 		color: var(--ink-soft);
 		max-width: 38rem;
 		line-height: 1.55;
+	}
+
+	/* Tightened because a second line now follows it. The 2rem gap belongs
+	   below the pair, not between them. */
+	header p.intro {
+		margin-bottom: 0.8rem;
+	}
+
+	.privacy {
+		font-size: 0.85rem;
+	}
+
+	/* A quiet circled question mark. Hover gives the sentence, clicking goes
+	   to the FAQ -- title alone is invisible to a keyboard, so the link is the
+	   real affordance and the tooltip is the shortcut. */
+	.why {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.05rem;
+		height: 1.05rem;
+		border: 1px solid var(--line);
+		border-radius: 50%;
+		color: var(--ink-soft);
+		text-decoration: none;
+		font-size: 0.7rem;
+		line-height: 1;
+		vertical-align: middle;
+		margin-left: 0.15rem;
+	}
+
+	.why:hover {
+		border-color: var(--accent);
+		color: var(--accent);
+		background: var(--accent-soft);
 	}
 
 	.results-head {

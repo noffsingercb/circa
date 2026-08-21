@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="referrer" content="no-referrer" />
+		<title>How this works — Circa</title>
+		<meta
+			name="description"
+			content="How Circa turns a place and a date into a timeline: what reach means, and why two nearby towns can return different history."
+		/>
+		<!--
+			Absolute paths. These files are copied to the build root verbatim and
+			are never processed by SvelteKit, so the path is ours to choose, and the
+			site is served from a domain root.
+		-->
+		<link rel="stylesheet" href="/theme.css" />
+		<link rel="stylesheet" href="/site.css" />
+	</head>
+	<body>
+		<header class="site-header">
+			<a class="wordmark" href="/">Circa</a>
+		</header>
+
+		<main class="prose">
+			<h1>How this works</h1>
+			<p class="lede">
+				Circa takes a place and a date and shows you the history that was within reach of that
+				place at that time. Here is what that actually means.
+			</p>
+
+			<h2>What you give it</h2>
+			<p>
+				A kind of life event, a place, and a date. One birth or death is required, because a life
+				needs an anchor in time before anything can be measured against it. Everything else is
+				optional: somewhere they lived, a marriage, a death.
+			</p>
+			<p>
+				Partial answers are expected rather than tolerated. A year on its own is enough. So is a
+				country on its own. Circa will tell you when it has matched a country or a state rather
+				than a town, because that changes how much you should trust a distance, and you should be
+				told rather than left to guess.
+			</p>
+
+			<h2>What it does with it</h2>
+			<p>
+				Your events become spans: stretches of time attached to a location. A birth in one town and
+				a death in another sixty years later describe a life that has to be somewhere in between,
+				and each span is looked at separately.
+			</p>
+			<p>
+				For each span, Circa asks the history record a narrow question: what was close enough, and
+				recent enough, to have been part of that life.
+			</p>
+
+			<h2>What “within reach” means</h2>
+			<p>
+				This is the part that is easy to get backwards. Circa does not draw a circle around your
+				town and collect whatever falls inside it. The circle belongs to the <em>event</em>, not to
+				you.
+			</p>
+			<p>
+				Every historic event in the record carries its own reach — how far its influence
+				plausibly extended. A county fair reaches the county. A world war reaches everywhere. An
+				event appears in your timeline when your place falls inside <em>its</em> reach.
+			</p>
+			<p>
+				That single decision explains most of what the timeline does. It is why something enormous
+				and far away can outrank something small and close: the distant event's reach covers your
+				town comfortably, and it mattered more. It is also why a genuinely local event, which
+				would lose on significance to anything national, still earns its place — it is one of the
+				few things whose reach was small enough to be about your town in particular.
+			</p>
+
+			<h3>Why two towns an hour apart differ</h3>
+			<p>
+				Because reaches are of wildly different sizes, an hour's drive crosses the edge of the
+				small ones and none of the large ones. Two towns that close will share their national and
+				global history almost exactly, and will diverge sharply on everything local. If two
+				neighbouring towns returned identical timelines, Circa would be doing nothing more than
+				looking up a decade.
+			</p>
+
+			<h3>Why a famous birth does not crowd out a local flood</h3>
+			<p>
+				Notable births and deaths are drawn from their own allowance rather than competing with
+				local history for the same slots. Left to compete, well-known people win on significance
+				nearly every time, and the result is a timeline of celebrities who happened to be born
+				nearby instead of a portrait of a place.
+			</p>
+
+			<h2>A worked example</h2>
+			<!--
+				TODO: replace with a real run once there is a timeline worth showing.
+				Deliberately written without specific events, distances or dates: an
+				invented example on the page that explains the method is the worst
+				place in the site to be wrong.
+			-->
+			<p>
+				Take a birth in a small town in the 1910s and a death in a city seventy years later. That
+				is two spans. The first pulls in the things that reached a small town in that decade —
+				the arrival of a railway, a flood, a mine opening — alongside the national events large
+				enough to reach anywhere. The second pulls in a city's history, which is denser, and where
+				the local tier has far more competition.
+			</p>
+			<p>
+				Read end to end, the two together are a rough answer to a question that is otherwise hard
+				to ask: what was going on around this person while they were alive.
+			</p>
+
+			<h2>What it is not</h2>
+			<p>
+				Circa is not genealogy. It does not know anything about the person, holds no records about
+				them, and cannot tell you whether they were present at any of this. It describes the
+				surroundings of a life, not the life.
+			</p>
+			<p class="note">
+				The history record is broad rather than complete, and it is thinner the further back and
+				the further from large cities you go. An empty local tier usually means the record is
+				quiet there, not that nothing happened.
+			</p>
+			<p><a href="/faq">More questions</a> · <a href="/resources">Where the data comes from</a></p>
+		</main>
+
+		<footer class="site-footer">
+			<div class="inner">
+				<a href="/">Circa App</a>
+				<a href="/why">Why this exists</a>
+				<a href="/how-it-works">How this works</a>
+				<a href="/resources">Resources</a>
+				<a href="/faq">FAQ</a>
+				<span class="spacer"></span>
+				<a class="who" href="https://www.linkedin.com/in/noffsingercb/" rel="noopener">
+					By Ben Noffsinger
+				</a>
+			</div>
+		</footer>
+	</body>
+</html>

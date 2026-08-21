@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="referrer" content="no-referrer" />
+		<title>Resources — Circa</title>
+		<meta
+			name="description"
+			content="Where Circa's history comes from, what built it, and who made it."
+		/>
+		<link rel="stylesheet" href="/theme.css" />
+		<link rel="stylesheet" href="/site.css" />
+	</head>
+	<body>
+		<header class="site-header">
+			<a class="wordmark" href="/">Circa</a>
+		</header>
+
+		<main class="prose">
+			<h1>Resources</h1>
+			<p class="lede">Where the history comes from, what built it, and who made it.</p>
+
+			<h2>The history</h2>
+			<dl>
+				<dt><a href="https://www.wikidata.org" rel="noopener">Wikidata</a></dt>
+				<dd>
+					The structured backbone: events, dates, coordinates and the links between them. Released
+					under CC0, which is why a project like this can exist at all.
+				</dd>
+
+				<dt><a href="https://www.wikipedia.org" rel="noopener">Wikipedia</a></dt>
+				<dd>
+					The prose. Where a tile has a sentence explaining what happened, it generally started
+					here. Text is available under CC BY-SA.
+				</dd>
+
+				<dt>
+					<a href="https://github.com/noffsingercb/GeoHistory" rel="noopener">GeoHistory</a>
+				</dt>
+				<dd>
+					The dataset and the engine underneath Circa. It decides how far each event reaches, how
+					much it mattered, and which events earn a place in a timeline. Circa is a front end over
+					it and nothing more.
+				</dd>
+			</dl>
+			<!--
+				TODO before launch: confirm the attribution wording satisfies CC BY-SA
+				for any Wikipedia-derived prose that actually ships in a tile. Naming
+				the licence is the floor, not necessarily the whole obligation.
+			-->
+			<p class="note">
+				The record is broad rather than complete, and thinner the further back and the further from
+				large cities you go. It is a good starting point and a poor last word.
+			</p>
+
+			<h2>The build</h2>
+			<dl>
+				<dt><a href="https://github.com/noffsingercb/circa" rel="noopener">Circa</a></dt>
+				<dd>
+					This site and the app. A static bundle over a small read-only API — no accounts, no
+					database of its own, nothing to sign in to.
+				</dd>
+
+				<dt><a href="https://kit.svelte.dev" rel="noopener">SvelteKit</a></dt>
+				<dd>The app. Prerendered to static files, which is why it loads the way it does.</dd>
+			</dl>
+
+			<h2>Who made it</h2>
+			<p>
+				Circa was designed and built by
+				<a href="https://www.linkedin.com/in/noffsingercb/" rel="noopener">Ben Noffsinger</a>,
+				along with the GeoHistory dataset and engine behind it. There is a longer version of the
+				story on <a href="/why">Why this exists</a>.
+			</p>
+			<p>
+				<a href="https://www.notion.com/product/ai" rel="noopener">Notion AI</a> was a working part
+				of how it got built rather than a footnote — a collaborator on the architecture, the
+				scoring model, the copy on these pages, and a fair amount of the code, worked through in
+				conversation and tracked on a Notion board alongside it.
+			</p>
+
+			<h2>Using it elsewhere</h2>
+			<p>
+				Circa runs as a chromeless embed at <code>/embed</code>, sized to whatever page it is
+				dropped into. If you want it on your own site, that is the address to point an iframe at.
+			</p>
+		</main>
+
+		<footer class="site-footer">
+			<div class="inner">
+				<a href="/">Circa App</a>
+				<a href="/why">Why this exists</a>
+				<a href="/how-it-works">How this works</a>
+				<a href="/resources">Resources</a>
+				<a href="/faq">FAQ</a>
+				<span class="spacer"></span>
+				<a class="who" href="https://www.linkedin.com/in/noffsingercb/" rel="noopener">
+					By Ben Noffsinger
+				</a>
+			</div>
+		</footer>
+	</body>
+</html>
