@@ -180,9 +180,38 @@ Two deliberate details:
   blocks and the timeline sets computed positions as inline style attributes; without it the site
   renders unstyled. `script-src` does **not** include it, which is the directive that matters — CI
   fails the build if it ever appears there.
-- **`X-Frame-Options` is not sent.** CSP `frame-ancestors` supersedes it, has the per-path control
-  this site needs, and sending both invites the two to disagree — at which point browsers differ on
-  which they honour.
+- **`X-Frame-Options` is not sent.** The decisive reason is per-path control: it cannot be detached
+  for a single route the way a CSP header can (see below), so an `X-Frame-Options: DENY` applied
+  site-wide would be inherited by `/embed` and would break the embed no matter what the CSP said.
+  `frame-ancestors` supersedes it in any case, and sending both invites the two to disagree — at
+  which point browsers differ on which they honour.
+
+### Cloudflare Pages appends rules, it does not override them
+
+Read this before editing the header script. Pages applies **every** rule whose path matches a
+request and concatenates the results; a more specific rule does not replace a broader one. Measured
+against a preview deployment:
+
+```
+GET /       -> 1 Content-Security-Policy header
+GET /embed  -> 2 Content-Security-Policy headers   (before the fix)
+```
+
+That is not a cosmetic duplicate. Under CSP, a response carrying several policies has each one
+enforced independently, and content must satisfy **all** of them — policies intersect, they do not
+replace. So an `/embed` response carrying both `frame-ancestors 'none'` from `/*` and
+`frame-ancestors *` from its own rule is **not framable**: the strictest wins. The rule meant to make
+the embed work did nothing, and it failed invisibly, because the header looks correct if you read
+only the second copy.
+
+Two consequences, both now enforced in CI:
+
+- The `/embed` rules emit `! Content-Security-Policy` to **detach** the inherited policy before
+  setting their own, so exactly one policy reaches the browser.
+- The shared headers (HSTS, COOP, `Referrer-Policy`, `X-Content-Type-Options`,
+  `Permissions-Policy`) are declared under `/*` **once** and inherited everywhere. Repeating them
+  per-rule duplicated all of them on `/embed` and collapsed HSTS into the malformed value
+  `max-age=31536000; includeSubDomains, max-age=31536000; includeSubDomains`.
 
 ### Framing
 
@@ -207,14 +236,35 @@ or absent on a dev server, and the fix is not emitting the attribute in the firs
 
 ### Checking it
 
+Count the policies, do not just look for the directive. A single grep for `frame-ancestors *`
+passed on the broken file described above, because the string was present — in the second of two
+policies that the browser was intersecting away.
+
 ```bash
-curl -sI https://circa-2cg.pages.dev/ | grep -i -e content-security -e strict-transport -e permissions
-curl -sI https://circa-2cg.pages.dev/embed | grep -i frame-ancestors
+for p in / /embed; do
+  echo "== $p"
+  curl -sSI "https://circa-2cg.pages.dev$p" | grep -ci '^content-security-policy'
+  curl -sSI "https://circa-2cg.pages.dev$p" | grep -i -e frame-ancestors -e strict-transport
+done
 ```
 
-The first should show `frame-ancestors 'none'`; the second `frame-ancestors *`. CI asserts the same
-facts against the generated file on every pull request, so a build that silently skips header
-generation fails there rather than in production.
+PowerShell:
+
+```powershell
+foreach ($p in @('/', '/embed')) {
+    "== $p"
+    $raw = curl.exe -sSI "https://circa-2cg.pages.dev$p"
+    ($raw | Select-String '^content-security-policy' -CaseSensitive:$false).Count
+    $raw | Select-String 'frame-ancestors|strict-transport' -CaseSensitive:$false
+}
+```
+
+Both paths must report **exactly one** policy: `/` with `frame-ancestors 'none'`, `/embed` with
+`frame-ancestors *`. Anything other than `1` means the rules are composing differently than this
+section assumes, and the embed is the first thing that will break. CI asserts the same invariants
+against the generated file on every pull request, including the detach line and a one-occurrence
+check on each shared header, so a build that silently regresses fails there rather than in
+production.
 
 ---
 
@@ -316,8 +366,12 @@ src/routes/+page.svelte      the full page
 src/routes/embed/            chromeless build for iframing
 scripts/gen-headers.mjs      generates build/_headers at build time
 static/                      public pages (why, how it works, resources, FAQ) + theme
-tests/                       segment derivation, geocoding
+tests/                       segment derivation, geocoding, sharing, sessions, URL allowlist
 ```
+
+Vitest collects `tests/**/*.test.ts` only (see `vite.config.ts`), so a test placed next to the module
+it covers is never run. Put new suites in `tests/` and import across with a relative path, as the
+existing ones do.
 
 ---
 
