@@ -17,14 +17,19 @@
  * it presents exactly like an API outage. Deriving both from one variable makes
  * that class of bug impossible rather than merely unlikely.
  *
+ * The same argument turned out to apply to script-src, the hard way. See the
+ * script-src note in csp() below.
+ *
  * Reading it here is safe: this script runs in the same `npm run build` as Vite
- * itself, so it sees the same environment that produced the bundle.
+ * itself, so it sees the same environment -- and the same build output -- that
+ * produced the bundle.
  *
  * Usage: `npm run build` (vite build && node scripts/gen-headers.mjs)
  */
 
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { collectInlineScripts, uniqueHashes } from './inline-script-hashes.mjs';
 
 /** Must match `pages`/`assets` in svelte.config.js. */
 const OUT_DIR = 'build';
@@ -71,6 +76,31 @@ if (!rawApi) {
 
 const apiOrigin = originOf(rawApi || API_FALLBACK, 'VITE_CIRCA_API');
 
+// The output directory is needed BEFORE the policy is built, because the policy
+// now depends on what is in it.
+if (!existsSync(OUT_DIR)) {
+	// Only happens if this is run without a preceding vite build. Creating the
+	// directory means the file is still written and the CI assertion still has
+	// something to check, rather than failing on a confusing ENOENT.
+	console.warn(`gen-headers: ${OUT_DIR}/ did not exist -- run this after vite build.`);
+	mkdirSync(OUT_DIR, { recursive: true });
+}
+
+/**
+ * Hashes for the inline scripts the build actually emitted. See
+ * scripts/inline-script-hashes.mjs for why these are scanned and not declared.
+ */
+const inlineScripts = collectInlineScripts(OUT_DIR);
+const inlineHashes = uniqueHashes(inlineScripts);
+
+if (inlineHashes.length === 0) {
+	console.warn('gen-headers: no inline scripts found in the build.');
+	console.warn('gen-headers: expected at least the SvelteKit bootstrap -- if the build is');
+	console.warn('gen-headers: complete, script-src will be stricter than it needs to be.');
+}
+
+const scriptSrc = ["script-src 'self'", ...inlineHashes.map((hash) => `'${hash}'`)].join(' ');
+
 /**
  * The policy, as one function of frame-ancestors.
  *
@@ -79,12 +109,20 @@ const apiOrigin = originOf(rawApi || API_FALLBACK, 'VITE_CIRCA_API');
  * to be added deliberately. Every directive that could otherwise silently
  * inherit from default-src is named.
  *
- * - script-src 'self'         -- no inline script anywhere. Verified: app.html
- *                                carries no bootstrap script, only a referrer
- *                                meta and a stylesheet link, and none of the
- *                                hand-written pages under static/ carry one
- *                                either. No 'unsafe-inline' here, which is the
- *                                directive that matters.
+ * - script-src 'self' + sha256 hashes -- no 'unsafe-inline', which is the
+ *                                keyword that actually matters, since it would
+ *                                permit any injected inline script. The hashes
+ *                                cover SvelteKit's bootstrap, which
+ *                                adapter-static injects into the GENERATED html
+ *                                at build time. An earlier version of this
+ *                                comment claimed there was no inline script
+ *                                anywhere and cited src/app.html as proof: the
+ *                                template is indeed clean, but the policy
+ *                                applies to the build output, which was not.
+ *                                The result was a blank page in production --
+ *                                the bootstrap was refused, so nothing
+ *                                hydrated. Hashes are recomputed every build
+ *                                because the bootstrap embeds chunk filenames.
  * - style-src adds 'unsafe-inline' -- REQUIRED, not an oversight. Svelte injects
  *                                component styles as inline <style> blocks, and
  *                                the timeline sets computed positions as inline
@@ -106,7 +144,7 @@ const apiOrigin = originOf(rawApi || API_FALLBACK, 'VITE_CIRCA_API');
 function csp(frameAncestors) {
 	return [
 		"default-src 'none'",
-		"script-src 'self'",
+		scriptSrc,
 		"style-src 'self' 'unsafe-inline'",
 		"img-src 'self' data:",
 		"font-src 'self'",
@@ -174,6 +212,10 @@ function rule(path, lines) {
  * Hence `! Content-Security-Policy`, which detaches the header inherited from
  * /* so this rule's policy is the only one on the response.
  *
+ * Because /embed's policy is standalone, it needs its own copy of the inline
+ * script hashes -- csp() supplies them to both, so the embed cannot be left
+ * behind by a policy that only /* received.
+ *
  * /embed is INTENTIONALLY framable -- that is the entire feature, and the
  * README documents the host-side integration. The main app is what clickjacking
  * actually threatens (it has the form and the vote buttons) and keeps
@@ -195,8 +237,9 @@ const EMBED_RULE_LINES = [
 const content = [
 	'# GENERATED FILE -- do not edit.',
 	'# Written by scripts/gen-headers.mjs during `npm run build`.',
-	'# connect-src is derived from VITE_CIRCA_API so it cannot drift from the',
-	'# API origin compiled into the bundle. Change the policy in that script.',
+	'# connect-src is derived from VITE_CIRCA_API and the script-src hashes are',
+	'# derived from the built HTML, so neither can drift from what shipped.',
+	'# Change the policy in that script.',
 	'',
 	rule('/*', [
 		'# Site-wide: framing denied. These headers are inherited by every route,',
@@ -211,17 +254,11 @@ const content = [
 	''
 ].join('\n');
 
-if (!existsSync(OUT_DIR)) {
-	// Only happens if this is run without a preceding vite build. Creating the
-	// directory means the file is still written and the CI assertion still has
-	// something to check, rather than failing on a confusing ENOENT.
-	console.warn(`gen-headers: ${OUT_DIR}/ did not exist -- run this after vite build.`);
-	mkdirSync(OUT_DIR, { recursive: true });
-}
-
 const outPath = join(OUT_DIR, '_headers');
 writeFileSync(outPath, content, 'utf8');
 
 console.log(`gen-headers: wrote ${outPath}`);
 console.log(`gen-headers:   connect-src 'self' ${apiOrigin} ${PHOTON_ORIGIN}`);
 console.log("gen-headers:   frame-ancestors 'none' site-wide; detached and set to * on /embed");
+console.log(`gen-headers:   script-src 'self' + ${inlineHashes.length} inline hash(es) from ${inlineScripts.length} script tag(s)`);
+for (const hash of inlineHashes) console.log(`gen-headers:     '${hash}'`);

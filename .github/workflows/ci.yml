@@ -74,7 +74,7 @@ jobs:
             echo "::error::/embed must stay framable -- frame-ancestors * is missing"
             exit 1
           }
-          # THE ONE THAT ACTUALLY MATTERS.
+          # THE ONE THAT ACTUALLY MATTERS FOR FRAMING.
           #
           # Cloudflare Pages applies every matching rule and concatenates the
           # results -- a more specific rule does not override a broader one.
@@ -108,3 +108,17 @@ jobs:
             exit 1
           fi
           echo "build/_headers looks right."
+
+      # THE ONE THAT ACTUALLY MATTERS FOR THE PAGE RENDERING AT ALL.
+      #
+      # Every assertion above passed on the build that served a blank page in
+      # production. They check the shape of the headers; none of them can detect
+      # a policy that forbids the script which starts the application.
+      # script-src 'self' refused SvelteKit's inline bootstrap, hydration never
+      # ran, and the only visible symptom was an empty document.
+      #
+      # This step reads the built HTML the policy will actually govern and fails
+      # if any inline script in it is missing from any generated policy -- so it
+      # fails on the artifact that shipped, not on a description of it.
+      - name: Assert every inline script is hashed in the CSP
+        run: node scripts/check-inline-hashes.mjs
