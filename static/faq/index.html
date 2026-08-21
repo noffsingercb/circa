@@ -4,7 +4,7 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="referrer" content="no-referrer" />
-		<title>FAQ — Circa</title>
+		<title>Frequently Asked Questions — Circa</title>
 		<meta
 			name="description"
 			content="What Circa keeps, how share links work, what happens when you rate a tile, and what to do with a partial date."
@@ -18,91 +18,128 @@
 		</header>
 
 		<main class="prose">
-			<h1>Questions</h1>
-			<p class="lede">The things people ask first.</p>
+			<h1>Frequently Asked Questions</h1>
 
-			<h2>Does Circa keep what I type?</h2>
-			<p>
-				No accounts, no sign-in, no saved searches. There is nowhere in Circa to enter a person's
-				name — the form asks for a place and a date, and that is all it has ever asked for. So
-				there is no history of who you looked up, because Circa was never told.
-			</p>
-			<p>
-				Close the tab and the timeline is gone. Come back tomorrow and Circa will not know you were
-				here.
-			</p>
+			<!--
+				Native <details> rather than a hand-rolled accordion. Keyboard
+				operation, the expanded/collapsed state announced to a screen reader,
+				and -- in current browsers -- in-page find opening a closed section to
+				reach a match all come for free. A div with a click handler has to
+				reimplement the first two and cannot do the third at all.
+			-->
+			<details class="qa">
+				<summary>Does Circa keep what I type?</summary>
+				<div class="answer">
+					<p>
+						No accounts, no sign-in, no saved searches. There is nowhere in Circa to enter a
+						person's name — the form asks for a place and a date, and that is all it has ever
+						asked for. So there is no history of who you looked up, because Circa was never told.
+					</p>
+					<p>
+						Close the tab and the timeline is gone. Come back tomorrow and Circa will not know you
+						were here.
+					</p>
+				</div>
+			</details>
 
-			<h2>Can I send someone my timeline, and will the link keep working?</h2>
-			<p>
-				Yes to both, and for the same reason. The life events travel inside the link itself rather
-				than pointing at something saved on a server. Whoever opens it gets the same events filled
-				in, and the timeline rebuilds itself in front of them.
-			</p>
-			<p>
-				Because there is nothing stored for the link to point at, there is nothing that can expire
-				or be cleaned up later. A link you send today still works in a year.
-			</p>
-			<p class="note">
-				The one thing worth knowing: the details are in the link, so treat it the way you would
-				treat the timeline itself. Anyone you send it to can see it, which is rather the point.
-			</p>
+			<details class="qa">
+				<summary>Can I send someone my timeline, and will the link keep working?</summary>
+				<div class="answer">
+					<p>
+						Yes to both, and for the same reason. The life events travel inside the link itself
+						rather than pointing at something saved on a server. Whoever opens it gets the same
+						events filled in, and the timeline rebuilds itself in front of them.
+					</p>
+					<p>
+						Because there is nothing stored for the link to point at, there is nothing that can
+						expire or be cleaned up later. A link you send today still works in a year.
+					</p>
+					<p class="note">
+						The one thing worth knowing: the details are in the link, so treat it the way you would
+						treat the timeline itself. Anyone you send it to can see it, which is rather the point.
+					</p>
+				</div>
+			</details>
 
-			<h2>What happens when I rate a tile?</h2>
-			<p>
-				Thumbs up and down are the only thing Circa records, and only at the moment you click one.
-				It notes which result you rated and which way, so the timeline can get better at what it
-				chooses to show.
-			</p>
-			<p>It is attached to no account, because there is no account to attach it to.</p>
+			<details class="qa">
+				<summary>What happens when I rate a tile?</summary>
+				<div class="answer">
+					<p>
+						Thumbs up and down are the only thing Circa records, and only at the moment you click
+						one. It notes which result you rated and which way, so the timeline can get better at
+						what it chooses to show.
+					</p>
+					<p>It is attached to no account, because there is no account to attach it to.</p>
+				</div>
+			</details>
 
-			<h2>What if I only know a year? Or the person is still living?</h2>
-			<p>
-				A year on its own is fine, and so is a country on its own. Circa is built for the shape of
-				the information people actually have, which is usually partial.
-			</p>
-			<p>
-				For someone still living, give the birth and add somewhere they have lived. A death is only
-				one of two ways to anchor a life; it is not required.
-			</p>
-			<p>
-				The less precise the place, the more carefully you should read the distances. A country
-				matches from its centre, which can be a long way from anywhere a person actually stood, and
-				Circa says so when it happens.
-			</p>
+			<details class="qa">
+				<summary>What if I only know a year? Or the person is still living?</summary>
+				<div class="answer">
+					<p>
+						A year on its own is fine, and so is a country on its own. Circa is built for the shape
+						of the information people actually have, which is usually partial.
+					</p>
+					<p>
+						For someone still living, give the birth and add somewhere they have lived. A death is
+						only one of two ways to anchor a life; it is not required.
+					</p>
+					<p>
+						The less precise the place, the more carefully you should read the distances. A country
+						matches from its centre, which can be a long way from anywhere a person actually stood,
+						and Circa says so when it happens.
+					</p>
+				</div>
+			</details>
 
-			<h2>My town returned nothing local. Is it broken?</h2>
-			<p>
-				Probably not. The history record is broad rather than complete, and it thins out the further
-				back you go and the further you get from large cities. A quiet local tier usually means the
-				record is quiet there, not that the town had no history.
-			</p>
-			<p>
-				The national and global events in your timeline are unaffected — those reach everywhere,
-				including places the record has little to say about.
-			</p>
+			<details class="qa">
+				<summary>My town returned nothing local. Is it broken?</summary>
+				<div class="answer">
+					<p>
+						Probably not. The history record is broad rather than complete, and it thins out the
+						further back you go and the further you get from large cities. A quiet local tier usually
+						means the record is quiet there, not that the town had no history.
+					</p>
+					<p>
+						The national and global events in your timeline are unaffected — those reach
+						everywhere, including places the record has little to say about.
+					</p>
+				</div>
+			</details>
 
-			<h2>Where does the history come from?</h2>
-			<p>
-				Wikidata and Wikipedia, assembled into a dataset by the GeoHistory project. The
-				<a href="/resources">Resources</a> page has the details and the links.
-			</p>
+			<details class="qa">
+				<summary>Where does the history come from?</summary>
+				<div class="answer">
+					<p>
+						Wikidata and Wikipedia, assembled into a dataset by the GeoHistory project. The
+						<a href="/resources">Resources</a> page has the details and the links.
+					</p>
+				</div>
+			</details>
 
-			<h2>How does it decide what to show?</h2>
-			<p>
-				Every event carries its own reach, and it appears when your place falls inside it — which
-				is why a distant war can outrank a nearby fair, and why two neighbouring towns get different
-				answers. <a href="/how-it-works">How this works</a> explains it properly.
-			</p>
+			<details class="qa">
+				<summary>How does it decide what to show?</summary>
+				<div class="answer">
+					<p>
+						Every event carries its own reach, and it appears when your place falls inside it —
+						which is why a distant war can outrank a nearby fair, and why two neighbouring towns get
+						different answers. <a href="/how-it-works">How this works</a> explains it properly.
+					</p>
+				</div>
+			</details>
 		</main>
 
 		<footer class="site-footer">
 			<div class="inner">
-				<a href="/">Open Circa</a>
+				<a href="/">Circa App</a>
+				<a href="/why-this-exists">Why this exists</a>
 				<a href="/how-it-works">How this works</a>
 				<a href="/resources">Resources</a>
 				<a href="/faq">FAQ</a>
 				<span class="spacer"></span>
-				<span class="who">By Ben Noffsinger</span>
+				<a class="who" href="https://www.linkedin.com/in/noffsingercb/" rel="noopener">
+					By Ben Noffsinger
+				</a>
 			</div>
 		</footer>
 	</body>

@@ -10,7 +10,7 @@
  * src/lib/components/SiteFooter.svelte, because Svelte scopes a component's
  * styles and a plain HTML file cannot reach them. Keeping the two in sync by
  * hand is the accepted cost of not building a shared component system for
- * four pages. If they drift somewhere visible, that is the signal to
+ * five pages. If they drift somewhere visible, that is the signal to
  * reconsider -- not before.
  */
 
@@ -116,6 +116,104 @@
 	max-width: 40rem;
 }
 
+/* -------------------------------------------------------------------------- */
+/* FAQ disclosures                                                            */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Built on <details>/<summary>. The caret is drawn in CSS on the trailing
+ * edge, which means the default browser triangle has to be suppressed twice:
+ * list-style for the standards path, and ::-webkit-details-marker for older
+ * WebKit, which ignores the first.
+ */
+
+/* Restores the gap the .lede used to hold open on this page. */
+.prose h1 + .qa {
+	margin-top: 1.75rem;
+	border-top: 1px solid var(--line);
+}
+
+.qa {
+	border-bottom: 1px solid var(--line);
+	max-width: 40rem;
+}
+
+.qa summary {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1.25rem;
+	padding: 0.95rem 0.15rem;
+	cursor: pointer;
+	font-family: var(--font);
+	font-size: 1.05rem;
+	line-height: 1.4;
+	list-style: none;
+}
+
+.qa summary::-webkit-details-marker {
+	display: none;
+}
+
+/*
+ * Two borders on a rotated square: the standard chevron, and the only version
+ * that inherits colour and scales with the text rather than shipping an icon
+ * font or an SVG for one glyph. flex: none keeps it from being squeezed by a
+ * long question.
+ */
+.qa summary::after {
+	content: '';
+	flex: none;
+	width: 0.45rem;
+	height: 0.45rem;
+	margin-right: 0.2rem;
+	border-right: 2px solid var(--ink-soft);
+	border-bottom: 2px solid var(--ink-soft);
+	transform: rotate(45deg);
+	transition: transform 120ms ease;
+}
+
+.qa[open] summary::after {
+	transform: rotate(-135deg);
+}
+
+.qa summary:hover {
+	color: var(--accent);
+}
+
+.qa summary:hover::after {
+	border-color: var(--accent);
+}
+
+.qa .answer {
+	padding: 0 0.15rem 1.15rem;
+}
+
+/* The summary already supplies the space above and below the answer, so the
+   first and last paragraphs must not add their own. */
+.qa .answer > :first-child {
+	margin-top: 0;
+}
+
+.qa .answer > :last-child {
+	margin-bottom: 0;
+}
+
+/*
+ * On paper, every answer. A printed FAQ showing seven questions and no
+ * answers is a broken document, and print is exactly where nobody can click
+ * to open them.
+ */
+@media print {
+	.qa .answer {
+		display: block;
+	}
+
+	.qa summary::after {
+		display: none;
+	}
+}
+
 .site-footer {
 	border-top: 1px solid var(--line);
 	margin-top: 2rem;
@@ -142,10 +240,6 @@
 
 .site-footer .spacer {
 	flex: 1;
-}
-
-.site-footer .who {
-	color: var(--ink-soft);
 }
 
 /*

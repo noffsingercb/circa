@@ -7,23 +7,31 @@
 	it, the links are there for anyone who finishes and wants to know how it
 	worked.
 
+	No "Circa App" link here, unlike the static pages' footer: this IS the app,
+	and a link to the page you are already on is noise.
+
 	The styles here duplicate .site-footer in static/site.css, because Svelte
 	scopes component styles and the hand-written HTML pages cannot reach them.
-	That is the accepted cost of not building a shared component system for four
+	That is the accepted cost of not building a shared component system for five
 	pages -- see the comment in site.css.
 
-	data-sveltekit-reload on every link: these are static HTML files, not routes
-	in this app. Without it the client-side router would try to handle the
-	navigation itself, find no matching route, and fall through to the SPA
-	fallback instead of loading the page.
+	data-sveltekit-reload on every internal link: these are static HTML files,
+	not routes in this app. Without it the client-side router would try to
+	handle the navigation itself, find no matching route, and fall through to
+	the SPA fallback instead of loading the page.
 -->
 <footer class="site-footer no-print">
 	<div class="inner">
+		<a href="/why-this-exists" data-sveltekit-reload>Why this exists</a>
 		<a href="/how-it-works" data-sveltekit-reload>How this works</a>
 		<a href="/resources" data-sveltekit-reload>Resources</a>
 		<a href="/faq" data-sveltekit-reload>FAQ</a>
 		<span class="spacer"></span>
-		<span class="who">By Ben Noffsinger</span>
+		<!-- External, so no data-sveltekit-reload: the router never intercepts a
+		     cross-origin href. -->
+		<a class="who" href="https://www.linkedin.com/in/noffsingercb/" rel="noopener">
+			By Ben Noffsinger
+		</a>
 	</div>
 </footer>
 
@@ -53,10 +61,6 @@
 
 	.spacer {
 		flex: 1;
-	}
-
-	.who {
-		color: var(--ink-soft);
 	}
 
 	@media (max-width: 640px) {
