@@ -5,6 +5,12 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="referrer" content="no-referrer" />
 		<title>Circa</title>
+		<!--
+			Shared tokens and base element styles. Loaded before %sveltekit.head%
+			deliberately: base rules must come first so bundled component styles
+			still override them.
+		-->
+		<link rel="stylesheet" href="%sveltekit.assets%/theme.css" />
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
