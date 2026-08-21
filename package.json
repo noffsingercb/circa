@@ -6,7 +6,8 @@
 	"description": "Enter a few life events, get the history that surrounded them.",
 	"scripts": {
 		"dev": "vite dev",
-		"build": "vite build",
+		"build": "vite build && node scripts/gen-headers.mjs",
+		"headers": "node scripts/gen-headers.mjs",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync",
 		"test": "vitest run",

@@ -33,5 +33,51 @@ jobs:
       - name: Test
         run: npm test
 
+      # A deliberately fake API origin. The build must not depend on a real one,
+      # and giving it a recognisable value lets the assertion below prove that
+      # the CSP is genuinely derived from this variable rather than from a
+      # hardcoded string that happens to look right.
       - name: Build
         run: npm run build
+        env:
+          VITE_CIRCA_API: https://api.ci.invalid
+
+      # The security headers only exist if the build generated them, and a build
+      # that quietly skips that step ships a site with no CSP at all -- which is
+      # invisible until somebody thinks to check response headers in production.
+      # Assert it here, where it is cheap.
+      - name: Assert security headers were generated
+        run: |
+          set -euo pipefail
+          test -f build/_headers || {
+            echo "::error::build/_headers is missing. Did scripts/gen-headers.mjs run?"
+            exit 1
+          }
+          echo '--- build/_headers ---'
+          cat build/_headers
+          echo '----------------------'
+          grep -q 'Content-Security-Policy:' build/_headers || {
+            echo "::error::no Content-Security-Policy in build/_headers"
+            exit 1
+          }
+          # connect-src must carry the origin from VITE_CIRCA_API. If this fails,
+          # the CSP is not derived from the variable and will block the real API.
+          grep -q 'https://api.ci.invalid' build/_headers || {
+            echo "::error::connect-src does not reflect VITE_CIRCA_API"
+            exit 1
+          }
+          grep -q "frame-ancestors 'none'" build/_headers || {
+            echo "::error::site-wide frame-ancestors 'none' is missing"
+            exit 1
+          }
+          grep -q 'frame-ancestors \*' build/_headers || {
+            echo "::error::/embed must stay framable -- frame-ancestors * is missing"
+            exit 1
+          }
+          # 'unsafe-inline' in script-src would silently undo the policy's main
+          # purpose. style-src legitimately has it; script-src must not.
+          if grep -q "script-src[^;]*unsafe-inline" build/_headers; then
+            echo "::error::script-src contains 'unsafe-inline'"
+            exit 1
+          fi
+          echo "build/_headers looks right."
