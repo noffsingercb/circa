@@ -74,6 +74,33 @@ jobs:
             echo "::error::/embed must stay framable -- frame-ancestors * is missing"
             exit 1
           }
+          # THE ONE THAT ACTUALLY MATTERS.
+          #
+          # Cloudflare Pages applies every matching rule and concatenates the
+          # results -- a more specific rule does not override a broader one.
+          # Measured on preview af71183d: GET /embed returned TWO
+          # Content-Security-Policy headers, one per matching rule. Under CSP,
+          # multiple policies are each enforced independently and content must
+          # satisfy all of them, so 'none' and * intersected to 'none' and the
+          # embed was silently unframable.
+          #
+          # The two greps above both PASSED on that broken file, which is the
+          # whole reason this check exists. The detach line is what guarantees
+          # /embed's policy is the only one on the response.
+          grep -q '^  ! Content-Security-Policy$' build/_headers || {
+            echo "::error::/embed does not detach the inherited CSP. Two policies will intersect and framing will break."
+            exit 1
+          }
+          # Shared headers belong under /* only, and are inherited. Repeating
+          # them per-rule duplicated every one of them on /embed and produced a
+          # malformed comma-joined Strict-Transport-Security value.
+          for header in Strict-Transport-Security Cross-Origin-Opener-Policy Referrer-Policy X-Content-Type-Options Permissions-Policy; do
+            count=$(grep -c "^  ${header}:" build/_headers || true)
+            if [ "$count" -ne 1 ]; then
+              echo "::error::${header} appears ${count} times in build/_headers; expected exactly 1 (set it under /* and let it inherit)"
+              exit 1
+            fi
+          done
           # 'unsafe-inline' in script-src would silently undo the policy's main
           # purpose. style-src legitimately has it; script-src must not.
           if grep -q "script-src[^;]*unsafe-inline" build/_headers; then
