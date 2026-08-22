@@ -21,8 +21,25 @@
 	--ink-soft: #6b6459;
 	--line: #ddd6ca;
 	--paper: #fbf9f5;
-	--accent: #8a5a2b;
-	--accent-soft: #f0e6d8;
+
+	/*
+	 * The accent family is sampled from the ribbon in the logo.
+	 *
+	 * The ribbon's own mid-tone is #bc5c1c and its highlight is #de7d3b, but
+	 * neither is dark enough to carry white text: the primary button would land
+	 * at roughly 4.5:1 and 3:1 respectively. --accent is therefore the ribbon
+	 * deepened slightly to about 4.9:1 on white, which passes AA for
+	 * normal-size text. --accent-bright keeps the true highlight for decorative
+	 * use, where nothing has to be legible on top of it.
+	 *
+	 * --accent-ink is for text on an --accent-soft background, where the accent
+	 * itself is too close in value to read comfortably.
+	 */
+	--accent: #b25617;
+	--accent-bright: #de7d3b;
+	--accent-ink: #7a3f10;
+	--accent-soft: #fae8d8;
+
 	--radius: 10px;
 	--font: ui-serif, Georgia, 'Times New Roman', serif;
 	--font-ui: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;

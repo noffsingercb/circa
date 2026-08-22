@@ -116,6 +116,28 @@
 	max-width: 40rem;
 }
 
+/*
+ * A closing mark at the foot of a page, as punctuation rather than as
+ * navigation -- which is why it is decorative and carries no alt text and no
+ * link. Centred against the prose column, with enough space above it that it
+ * reads as the end of the page and not as an illustration for the last
+ * paragraph.
+ */
+.page-mark {
+	display: block;
+	width: 220px;
+	height: 220px;
+	margin: 3.5rem auto 0;
+}
+
+@media (max-width: 560px) {
+	.page-mark {
+		width: 150px;
+		height: 150px;
+		margin-top: 2.5rem;
+	}
+}
+
 /* -------------------------------------------------------------------------- */
 /* FAQ disclosures                                                            */
 /* -------------------------------------------------------------------------- */
