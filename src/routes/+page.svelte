@@ -143,7 +143,24 @@
 
 <main>
 	<header class="no-print">
-		<h1>Circa</h1>
+		<!--
+			The mark carries no alt text on purpose: the h1 beside it already says
+			Circa, and naming the image too would have a screen reader announce the
+			word twice. width/height are set so the header does not reflow while the
+			image loads.
+		-->
+		<div class="title">
+			<img
+				class="mark"
+				src="/icon.png"
+				srcset="/icon.png 200w, /icon@2x.png 400w"
+				sizes="150px"
+				width="150"
+				height="150"
+				alt=""
+			/>
+			<h1>Circa</h1>
+		</div>
 		<p class="intro">
 			Circa shows you what was happening around a person’s life. Give it a birth or a death, plus
 			any places they lived, and it builds a timeline of the events that were within reach of those
@@ -293,10 +310,39 @@
 		padding: 3rem 1.25rem 6rem;
 	}
 
+	/* Mark and wordmark on one line. The h1's own bottom margin is dropped
+	   here so the two sit on a shared baseline box; the gap below the pair is
+	   owned by this row instead. */
+	.title {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		margin-bottom: 0.6rem;
+	}
+
+	.mark {
+		width: 150px;
+		height: 150px;
+		flex: none;
+	}
+
+	/* On a phone a 150px mark would take most of the first screen before a
+	   single word of explanation. */
+	@media (max-width: 560px) {
+		.mark {
+			width: 96px;
+			height: 96px;
+		}
+
+		.title {
+			gap: 0.75rem;
+		}
+	}
+
 	h1 {
 		font-family: var(--font);
 		font-size: 2.4rem;
-		margin: 0 0 0.35rem;
+		margin: 0;
 		letter-spacing: -0.01em;
 	}
 
