@@ -138,11 +138,12 @@ Two things about the hosted API are worth knowing:
 - **It must allow this origin.** The API refuses browser requests from any origin not in its
   `ALLOWED_ORIGIN` allowlist, and once that allowlist is set it also refuses `POST`s that arrive
   with no `Origin` header. The allowlist is comma-separated and matched **exactly** against the
-  browser's `Origin` header, so a trailing slash or a missing scheme fails closed. Preview
-  deployments have their own hostnames and are therefore *not* allowlisted by default — a preview
-  that renders but cannot build a timeline is usually this, not a bug. A healthy API plus a missing
-  allowlist entry looks exactly like an outage, so that is the first thing to check when every
-  request fails.
+  browser's `Origin` header, so a trailing slash or a missing scheme fails closed. In production it
+  holds `https://circatimeline.org`, `https://www.circatimeline.org` and the older
+  `https://circa-2cg.pages.dev`. Preview deployments have their own hostnames and are therefore
+  *not* allowlisted by default — a preview that renders but cannot build a timeline is usually this,
+  not a bug, and the fix is not a wildcard. A healthy API plus a missing allowlist entry looks
+  exactly like an outage, so that is the first thing to check when every request fails.
 - **A free instance sleeps** after roughly 15 minutes of no traffic. `src/lib/api.ts` fires a
   single, non-blocking `GET /v1/health` on page load so the container wakes while the visitor is
   still filling in the form.
@@ -257,6 +258,12 @@ Three consequences, all now enforced in CI:
   per-rule duplicated all of them on `/embed` and collapsed HSTS into the malformed value
   `max-age=31536000; includeSubDomains, max-age=31536000; includeSubDomains`.
 
+The same appending behaviour is why Cloudflare's **Bot Fight Mode** and **Page Shield** stay off on
+this zone. The first injects its own inline script into HTML responses, which `script-src 'self'`
+plus fixed hashes refuses — the identical mechanism that served the blank page above. The second
+adds its own `Content-Security-Policy-Report-Only` header, which would be concatenated rather than
+substituted, exactly as the duplicated `/embed` policies were.
+
 ### Framing
 
 `frame-ancestors 'none'` site-wide; `frame-ancestors *` on `/embed` only. The embed route is
@@ -292,8 +299,8 @@ policies that the browser was intersecting away.
 ```bash
 for p in / /embed; do
   echo "== $p"
-  curl -sSI "https://circa-2cg.pages.dev$p" | grep -ci '^content-security-policy'
-  curl -sSI "https://circa-2cg.pages.dev$p" | grep -i -e frame-ancestors -e strict-transport -e sha256
+  curl -sSI "https://circatimeline.org$p" | grep -ci '^content-security-policy'
+  curl -sSI "https://circatimeline.org$p" | grep -i -e frame-ancestors -e strict-transport -e sha256
 done
 ```
 
@@ -302,7 +309,7 @@ PowerShell:
 ```powershell
 foreach ($p in @('/', '/embed')) {
     "== $p"
-    $raw = curl.exe -sSI "https://circa-2cg.pages.dev$p"
+    $raw = curl.exe -sSI "https://circatimeline.org$p"
     ($raw | Select-String '^content-security-policy' -CaseSensitive:$false).Count
     $raw | Select-String 'frame-ancestors|strict-transport|sha256' -CaseSensitive:$false
 }
@@ -369,7 +376,7 @@ size itself.
 ```html
 <iframe
   id="circa"
-  src="https://your-host.example/embed"
+  src="https://circatimeline.org/embed"
   style="width:100%;border:0;height:640px"
   title="Circa"
   loading="lazy"
@@ -378,7 +385,7 @@ size itself.
 <script>
   window.addEventListener('message', function (event) {
     // Pin this to the origin you actually serve Circa from.
-    if (event.origin !== 'https://your-host.example') return;
+    if (event.origin !== 'https://circatimeline.org') return;
     if (event.data && event.data.type === 'circa:height') {
       document.getElementById('circa').style.height = event.data.height + 'px';
     }
@@ -417,7 +424,7 @@ src/routes/embed/            chromeless build for iframing
 scripts/gen-headers.mjs      generates build/_headers at build time
 scripts/inline-script-hashes.mjs   hashes the inline scripts the build emitted
 scripts/check-inline-hashes.mjs    CI: every inline script is hashed in every policy
-static/                      public pages (why, how it works, resources, FAQ) + theme
+static/                      public pages (why, how it works, resources, FAQ) + theme + icons
 tests/                       segment derivation, geocoding, sharing, sessions, URL allowlist
 ```
 
@@ -434,15 +441,22 @@ its sparsity backstop, the year-scaled timeline, reset, print, the embed route, 
 thumbs up/down relevance feedback, the public pages (why, how it works, resources, FAQ), and the
 reach diagnostics above.
 
-Deployed at [circa-2cg.pages.dev](https://circa-2cg.pages.dev/) on Cloudflare Pages.
+Deployed at [circatimeline.org](https://circatimeline.org/) on Cloudflare Pages.
+`www.circatimeline.org` redirects to the apex with a `301` that preserves both path and query
+string, which matters because a share link carries its entire state in the URL. The original
+`circa-2cg.pages.dev` hostname still serves the same build and remains in the API allowlist, so
+links shared before the move continue to resolve.
 
-Not yet: the move to `circatimeline.org`, which is registered but not yet serving. When it is, add
-it to the API's `ALLOWED_ORIGIN` (comma-separated, exact match) and update the hostnames in the
-verification recipes above. The CSP itself needs no edit: `connect-src` names the API rather than
-this site, `frame-ancestors` is origin-independent, and `paths: { relative: true }` in
-`svelte.config.js` means the bundle carries no absolute self-references. Note that HSTS with
-`includeSubDomains` commits a new apex to HTTPS for a year on the first request a browser makes to
-it; that is intended, but it is why `preload` is not sent.
+The move needed no change to the CSP, as expected: `connect-src` names the API rather than this
+site, `frame-ancestors` is origin-independent, and `paths: { relative: true }` in `svelte.config.js`
+means the bundle carries no absolute self-references. What it did need was the new origins in the
+API's `ALLOWED_ORIGIN` (comma-separated, exact match) — without them the site loads and every
+timeline request fails.
+
+HSTS with `includeSubDomains` commits the apex to HTTPS for a year on the first request a browser
+makes to it. That is intended, and it is also why `preload` is **not** sent: preloading ships the
+commitment into browsers ahead of any request, and removal takes months. The header is ours to
+retract at any time; a preload list entry is not.
 
 ---
 
