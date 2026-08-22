@@ -144,7 +144,11 @@
 <main>
 	<header class="no-print">
 		<!--
-			The mark carries no alt text on purpose: the h1 beside it already says
+			Two columns: the mark, then the wordmark with the intro stacked beneath
+			it, so the paragraph begins directly under "Circa" rather than under the
+			image.
+
+			The mark carries no alt text on purpose -- the h1 beside it already says
 			Circa, and naming the image too would have a screen reader announce the
 			word twice. width/height are set so the header does not reflow while the
 			image loads.
@@ -159,13 +163,15 @@
 				height="150"
 				alt=""
 			/>
-			<h1>Circa</h1>
+			<div class="titletext">
+				<h1>Circa</h1>
+				<p class="intro">
+					Circa shows you what was happening around a person’s life. Give it a birth or a death,
+					plus any places they lived, and it builds a timeline of the events that were within reach
+					of those places at the time.
+				</p>
+			</div>
 		</div>
-		<p class="intro">
-			Circa shows you what was happening around a person’s life. Give it a birth or a death, plus
-			any places they lived, and it builds a timeline of the events that were within reach of those
-			places at the time.
-		</p>
 		<!--
 			Stated once, up here, because the question it answers arrives before the
 			form is filled in rather than after. Short on purpose: the detail lives
@@ -310,14 +316,11 @@
 		padding: 3rem 1.25rem 6rem;
 	}
 
-	/* Mark and wordmark on one line. The h1's own bottom margin is dropped
-	   here so the two sit on a shared baseline box; the gap below the pair is
-	   owned by this row instead. */
+	/* Mark on the left, wordmark and intro stacked on the right. */
 	.title {
 		display: flex;
 		align-items: center;
-		gap: 1rem;
-		margin-bottom: 0.6rem;
+		gap: 1.5rem;
 	}
 
 	.mark {
@@ -326,16 +329,28 @@
 		flex: none;
 	}
 
-	/* On a phone a 150px mark would take most of the first screen before a
-	   single word of explanation. */
-	@media (max-width: 560px) {
-		.mark {
-			width: 96px;
-			height: 96px;
+	/* min-width: 0 so a long paragraph shrinks this column instead of pushing
+	   the row wider than the reading measure. */
+	.titletext {
+		flex: 1;
+		min-width: 0;
+	}
+
+	/*
+	 * Stacked below this width. A paragraph sharing a row with even a small
+	 * mark on a phone ends up a few words per line, which is harder to read
+	 * than the same paragraph at full width under it.
+	 */
+	@media (max-width: 640px) {
+		.title {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 0.75rem;
 		}
 
-		.title {
-			gap: 0.75rem;
+		.mark {
+			width: 110px;
+			height: 110px;
 		}
 	}
 
@@ -353,14 +368,15 @@
 		line-height: 1.55;
 	}
 
-	/* Tightened because a second line now follows it. The 2rem gap belongs
-	   below the pair, not between them. */
-	header p.intro {
-		margin-bottom: 0.8rem;
+	/* The row owns the space below the pair, so the intro only needs the small
+	   gap that separates it from the wordmark above it. */
+	.titletext .intro {
+		margin: 0.4rem 0 0;
 	}
 
 	.privacy {
 		font-size: 0.85rem;
+		margin-top: 1.1rem;
 	}
 
 	/* A quiet circled question mark. Hover gives the sentence, clicking goes
@@ -443,7 +459,7 @@
 
 	.units button.active {
 		background: var(--accent-soft);
-		color: #6d4419;
+		color: var(--accent-ink);
 	}
 
 	/* Echoes the dashed chip in EntryCard, so a screenshot taken with reach on
@@ -464,7 +480,7 @@
 		border: 1px solid var(--line);
 		border-radius: 6px;
 		background: var(--accent-soft);
-		color: #6d4419;
+		color: var(--accent-ink);
 		font-size: 0.82rem;
 	}
 
