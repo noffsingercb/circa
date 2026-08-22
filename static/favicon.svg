@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-label="Circa">
+	<!-- Simplified mark: globe + one equatorial ribbon. Built to stay legible at 16-48px,
+	     where the full photographic render collapses into noise. -->
+	<circle cx="16" cy="16" r="13" fill="#fbf9f5" stroke="#1c1a17" stroke-width="1.5"/>
+	<ellipse cx="16" cy="16" rx="5.4" ry="13" fill="none" stroke="#6b6459" stroke-width="0.9"/>
+	<ellipse cx="16" cy="10.6" rx="12.4" ry="4.1" fill="none" stroke="#6b6459" stroke-width="0.9"/>
+	<path d="M0.6,13.5 A15.4,4.7 0 0 0 31.4,13.5 L31.4,18.3 A15.4,4.7 0 0 1 0.6,18.3 Z" fill="#de7d3b"/>
+	<path d="M0.6,18.3 A15.4,4.7 0 0 0 31.4,18.3 L31.4,17.1 A15.4,4.7 0 0 1 0.6,17.1 Z" fill="#6f4722"/>
+	<circle cx="8.5" cy="16.6" r="0.95" fill="#1c1a17"/>
+	<circle cx="16" cy="17.1" r="0.95" fill="#1c1a17"/>
+	<circle cx="23.5" cy="16.6" r="0.95" fill="#1c1a17"/>
+</svg>
