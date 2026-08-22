@@ -5,6 +5,37 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="referrer" content="no-referrer" />
 		<title>Circa</title>
+		<meta name="description" content="the history that reached a life" />
+		<meta name="theme-color" content="#fbf9f5" />
+
+		<!--
+			Icons. favicon.svg is a simplified redrawing of the mark, not the
+			photographic render: the render is illegible below about 48px. The .ico
+			carries 16/32/48 of that same simplified drawing.
+		-->
+		<link rel="icon" href="%sveltekit.assets%/favicon.ico" sizes="any" />
+		<link rel="icon" type="image/svg+xml" href="%sveltekit.assets%/favicon.svg" />
+		<link rel="apple-touch-icon" href="%sveltekit.assets%/apple-touch-icon.png" />
+		<link rel="manifest" href="%sveltekit.assets%/site.webmanifest" />
+
+		<!--
+			Social preview. og:image must be an absolute URL because scrapers do not
+			resolve relative paths, so the domain is hardcoded here.
+		-->
+		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content="Circa" />
+		<meta property="og:title" content="Circa" />
+		<meta property="og:description" content="the history that reached a life" />
+		<meta property="og:url" content="https://circatimeline.org/" />
+		<meta property="og:image" content="https://circatimeline.org/og-card.png" />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+		<meta
+			property="og:image:alt"
+			content="A grid globe wrapped in a ribbon of years, beside the word Circa"
+		/>
+		<meta name="twitter:card" content="summary_large_image" />
+
 		<!--
 			Shared tokens and base element styles, also linked by the hand-written
 			HTML pages in static/.
