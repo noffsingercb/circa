@@ -67,6 +67,21 @@ export function addYears(iso: string, years: number): string {
 	return `${pad(year, 4)}-${pad(m)}-${pad(day)}`;
 }
 
+/**
+ * Today, as a date-only ISO string in UTC.
+ *
+ * UTC rather than local time deliberately. Every other string this module
+ * produces is a bare calendar date with no zone, and both the engine and this
+ * app compare them as text. Deriving one of them from the visitor's local
+ * clock would make the same form produce two different requests either side of
+ * midnight depending on where the visitor is sitting, and the difference would
+ * only ever show up as a one-day edge in what history is in range.
+ */
+export function todayISO(): string {
+	const now = new Date();
+	return `${pad(now.getUTCFullYear(), 4)}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())}`;
+}
+
 export function yearOf(iso: string): number {
 	return Number(iso.slice(0, 4));
 }

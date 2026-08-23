@@ -1,5 +1,5 @@
 import { DEATH_LOOKBACK_YEARS, LIFESPAN_CAP_YEARS, MAX_SEGMENTS } from './config';
-import { addYears, assertValid, hasYear, isoEnd, isoStart } from './dates';
+import { addYears, assertValid, hasYear, isoEnd, isoStart, todayISO } from './dates';
 import type { LifeEvent, SegmentInput } from './types';
 import { ValidationError } from './types';
 
@@ -24,6 +24,9 @@ import { ValidationError } from './types';
  *  - A final segment anchored on a death reaches DEATH_LOOKBACK_YEARS backward
  *    from that death, because a death is an end date and the rule above would
  *    otherwise give it no duration at all.
+ *
+ * Amended 2026-08-22:
+ *  - The forward projection stops at today. See openEndedEnd.
  */
 export function deriveSegments(events: LifeEvent[]): SegmentInput[] {
 	const usable = events.filter((event) => event.place !== null && hasYear(event.date));
@@ -59,9 +62,7 @@ export function deriveSegments(events: LifeEvent[]): SegmentInput[] {
 		? isoStart(birth.date)
 		: addYears(isoStart(sorted[0].date), -LIFESPAN_CAP_YEARS);
 
-	const spanEnd = death
-		? isoEnd(death.date)
-		: addYears(spanStart, LIFESPAN_CAP_YEARS);
+	const spanEnd = death ? isoEnd(death.date) : openEndedEnd(spanStart);
 
 	const segments: SegmentInput[] = sorted.map((event, index) => {
 		const place = event.place as NonNullable<LifeEvent['place']>;
@@ -78,6 +79,42 @@ export function deriveSegments(events: LifeEvent[]): SegmentInput[] {
 	applyDeathLookback(segments, sorted);
 
 	return mergeAdjacent(segments, sorted).slice(0, MAX_SEGMENTS);
+}
+
+/**
+ * Where a life with no recorded death stops.
+ *
+ * LIFESPAN_CAP_YEARS exists to bound an unknown: someone born in 1830 with no
+ * death on record did not live forever, and a century is a defensible outer
+ * edge. Applied unconditionally, though, it also projects INTO THE FUTURE for
+ * anybody still alive -- a birth in 1950 asked for a window ending in 2050.
+ *
+ * That was a live bug, not a theoretical one. The API refuses any year past
+ * next year (validateInput: MIN_YEAR_ACCEPTED..currentYear+1), so every
+ * death-less timeline anchored on a birth in 1928 or later came back 400,
+ * which Circa then reported as the history service being unavailable. On
+ * 2026-08-23 a visitor hit it within a minute of arriving:
+ *
+ *   POST /v1/timeline 400 1ms ip=136.32.129.0
+ *
+ * Clamping to today is both the fix and the more honest window, because the
+ * projected years were never worth anything: there is no history to find in
+ * 2050, so the request was strictly larger than the answer it could return.
+ * LIFESPAN_CAP_YEARS keeps its full meaning for the case it was written for --
+ * a birth long enough ago that a century still lands in the past.
+ *
+ * The guard on a future spanStart is not clamping a typo into looking valid.
+ * A birth dated after today cannot produce a sane window, and turning it into
+ * an inverted segment would trade the API's clear complaint about the year for
+ * a confusing one about the ordering. It is left alone so the year itself is
+ * what gets reported.
+ */
+function openEndedEnd(spanStart: string): string {
+	const projected = addYears(spanStart, LIFESPAN_CAP_YEARS);
+	const today = todayISO();
+
+	if (today <= spanStart) return projected;
+	return projected < today ? projected : today;
 }
 
 /**

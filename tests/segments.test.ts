@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { todayISO } from '../src/lib/dates';
 import { deriveSegments } from '../src/lib/segments';
 import type { LifeEvent, ResolvedPlace } from '../src/lib/types';
 import { ValidationError } from '../src/lib/types';
@@ -73,6 +74,42 @@ describe('deriveSegments', () => {
 
 		expect(segments[0].start).toBe('1902-03-14');
 		expect(segments[0].end).toBe('2002-03-14');
+	});
+
+	/*
+	 * The regression that shipped. LIFESPAN_CAP_YEARS was applied
+	 * unconditionally, so a birth in 1950 asked for a window ending in 2050 --
+	 * and the API refuses any year past next year, so every death-less lookup
+	 * by anyone born after 1927 came back 400. Circa reported that as the
+	 * history service being unavailable, and a visitor hit it in production on
+	 * 2026-08-23 within a minute of arriving.
+	 *
+	 * Note why the whole existing suite missed it: every other case here is
+	 * dated 1902, where a hundred-year projection still lands in the past.
+	 * These two cases are written relative to the current year on purpose --
+	 * a fixed year would age into passing for the wrong reason.
+	 */
+	it('clamps an open-ended life to today rather than projecting into the future', () => {
+		const born = new Date().getUTCFullYear() - 30;
+		const segments = deriveSegments([
+			event({ id: '1', kind: 'birth', date: { year: born, month: 6, day: 1 } })
+		]);
+
+		expect(segments[0].end).toBe(todayISO());
+	});
+
+	it('never asks for a year beyond what the API accepts', () => {
+		const thisYear = new Date().getUTCFullYear();
+		const segments = deriveSegments([
+			event({ id: '1', kind: 'birth', place: PUEBLO, date: { year: thisYear - 40, month: null, day: null } }),
+			event({ id: '2', kind: 'residence', place: CHICAGO, date: { year: thisYear - 5, month: null, day: null } })
+		]);
+
+		// MAX_YEAR_ACCEPTED in the engine's validateInput is currentYear + 1.
+		// Anything above it is a 400 for the whole request, not a trimmed segment.
+		for (const segment of segments) {
+			expect(Number((segment.end as string).slice(0, 4))).toBeLessThanOrEqual(thisYear + 1);
+		}
 	});
 
 	it('runs 100 years backward when there is a death but no birth', () => {

@@ -1,5 +1,5 @@
 import { get, writable } from 'svelte/store';
-import { fetchTimeline } from './api';
+import { ApiError, fetchTimeline } from './api';
 import { MAX_EVENTS } from './config';
 import { emptyDate } from './dates';
 import { deriveSegments } from './segments';
@@ -124,6 +124,46 @@ export function reset(): void {
 	status.set('idle');
 }
 
+/**
+ * Turn a failed request into something the visitor can act on.
+ *
+ * Every non-2xx status used to collapse into "the history service is not
+ * answering right now", which is only true for one of them. A 4xx means the
+ * request was wrong and the service was working perfectly -- and saying
+ * otherwise sends the visitor away to wait for a recovery that will never
+ * happen, while leaving no trace of what to change.
+ *
+ * That is not hypothetical: on 2026-08-23 a visitor looking up a living
+ * relative was told the service was down, while the API answered in one
+ * millisecond that the requested window ran past the years it holds. The
+ * underlying span bug is fixed in segments.ts, but the reporting failure is
+ * the more general one -- it would have hidden any other input the engine
+ * comes to reject.
+ *
+ * So a 4xx is quoted rather than paraphrased. The engine's wording is
+ * technical, and it is still strictly better than a sentence that is false:
+ * it names the field and the bound, which is enough for a visitor to try
+ * something different and enough for a screenshot to be diagnosable.
+ */
+function apiMessage(error: ApiError): string {
+	// Its own case: 429 is neither the visitor's mistake nor a broken service,
+	// and "try again in a moment" is actively wrong when the window is a minute.
+	if (error.status === 429) {
+		return 'Too many requests from your network just now. Wait a minute and try again.';
+	}
+
+	// 5xx, 408, and anything a proxy invented on the way: genuinely not us.
+	if (error.status >= 500 || error.status === 408) {
+		return 'The history service is not answering right now. Try again in a moment.';
+	}
+
+	if (error.status >= 400 && error.detail) {
+		return `That timeline could not be built: ${error.detail}`;
+	}
+
+	return 'That timeline could not be read.';
+}
+
 export async function submit(): Promise<void> {
 	errorMessage.set('');
 
@@ -152,9 +192,7 @@ export async function submit(): Promise<void> {
 	} catch (error) {
 		status.set('error');
 		errorMessage.set(
-			error instanceof Error && error.name === 'ApiError'
-				? 'The history service is not answering right now. Try again in a moment.'
-				: 'Something went wrong building that timeline.'
+			error instanceof ApiError ? apiMessage(error) : 'Something went wrong building that timeline.'
 		);
 	}
 }
