@@ -59,6 +59,7 @@
 	<p class="hint">
 		Enter as much or as little as you know. A year alone is fine, and so is a country alone.
 		One birth or death is required so the span has an anchor, and there can only be one of each.
+		Every date must be current or past — there is no history to find in the future.
 	</p>
 
 	{#if $status === 'error' && $errorMessage}

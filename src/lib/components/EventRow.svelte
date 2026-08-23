@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher, onDestroy } from 'svelte';
+	import { todayISO, yearOf } from '$lib/dates';
 	import { createPhotonProvider, createSuggester } from '$lib/geocode';
 	import { LIFE_EVENT_KINDS } from '$lib/types';
 	import type { LifeEvent, LifeEventKind, ResolvedPlace } from '$lib/types';
@@ -16,6 +17,21 @@
 
 	const dispatch = createEventDispatcher<{ remove: string }>();
 	const suggester = createSuggester(createPhotonProvider());
+
+	/**
+	 * Upper bound on the year field, derived from the clock rather than typed in.
+	 *
+	 * It was max="2200", which is where the browser's native "enter a year
+	 * earlier than 2200" message came from -- a bound the engine never shared,
+	 * since it refuses anything past next year. Everything from 2028 up was a
+	 * year this input invited and the API was always going to reject.
+	 *
+	 * This attribute is a courtesy, not the gate. It only fires on typed input,
+	 * and a timeline rebuilt from a shared URL never touches this form at all,
+	 * so assertValid in dates.ts is the check that actually holds. Both are
+	 * derived from today so they cannot drift apart.
+	 */
+	const MAX_YEAR = yearOf(todayISO());
 
 	let suggestions: ResolvedPlace[] = [];
 	let open = false;
@@ -103,7 +119,7 @@
 			placeholder="Year"
 			aria-label="Year"
 			min="1"
-			max="2200"
+			max={MAX_YEAR}
 		/>
 		<input
 			type="number"

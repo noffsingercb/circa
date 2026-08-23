@@ -22,13 +22,54 @@ export function precisionOf(date: PartialDate): Precision {
 	return 'year';
 }
 
+/** Earliest usable year. Mirrors the engine's MIN_YEAR_ACCEPTED. */
+const MIN_YEAR = 1;
+
+/**
+ * Validate a partial date, and refuse anything in the future.
+ *
+ * THE UPPER BOUND IS DERIVED FROM THE CLOCK, NOT WRITTEN DOWN.
+ *
+ * It used to be the literal 2200, and that literal cost a production
+ * diagnosis. The engine's validateInput accepts MIN_YEAR_ACCEPTED..currentYear
+ * + 1, so every year from 2028 to 2200 was a year this form invited and the
+ * API was always going to refuse. Worse, the matching max="2200" on the year
+ * input made the browser tell visitors to "enter a year earlier than 2200" --
+ * a bound that had never once been true. Two validators disagreeing about what
+ * a year is, with the stricter one downstream, is the same shape as the
+ * living-person 400 that reached a real visitor on 2026-08-23.
+ *
+ * Deriving the bound from today closes the disagreement permanently and lands
+ * strictly inside the engine's range, so this app can no longer be the source
+ * of an out-of-range year. It is deliberately NOT a config knob: "not in the
+ * future" is a fact about calendars rather than a tuning decision, and a
+ * settable value would just be a second copy of the original mistake.
+ *
+ * The comparison is on the FULL date, not the year alone. In August 2026 a
+ * visitor may enter 2026, and may enter August 2026, but not December 2026.
+ * Month and day are already validated by the time it runs, so isoStart() is
+ * safe to build. Year-only precision resolves to January 1, which is why the
+ * current year is always enterable.
+ *
+ * This applies to EVERY event kind, not only births. A marriage or a move
+ * dated next year is exactly as impossible, and left to reach the engine it
+ * would come back as a complaint about a segment index instead of a date.
+ */
 export function assertValid(date: PartialDate, context: string): void {
 	if (!hasYear(date)) {
 		throw new ValidationError('BAD_DATE', `${context}: a year is required.`);
 	}
 	const year = date.year as number;
-	if (!Number.isInteger(year) || year < 1 || year > 2200) {
+	if (!Number.isInteger(year) || year < MIN_YEAR) {
 		throw new ValidationError('BAD_DATE', `${context}: ${year} is not a usable year.`);
+	}
+	// Before the month and day checks, so a wildly wrong year is reported as a
+	// year rather than as a day-of-month complaint about some month in 3000.
+	if (year > yearOf(todayISO())) {
+		throw new ValidationError(
+			'BAD_DATE',
+			`${context}: ${year} is in the future. Enter a current or past date only.`
+		);
 	}
 	if (date.month !== null) {
 		if (!Number.isInteger(date.month) || date.month < 1 || date.month > 12) {
@@ -43,6 +84,12 @@ export function assertValid(date: PartialDate, context: string): void {
 		if (!Number.isInteger(date.day) || date.day < 1 || date.day > max) {
 			throw new ValidationError('BAD_DATE', `${context}: day must be 1-${max} for that month.`);
 		}
+	}
+	if (isoStart(date) > todayISO()) {
+		throw new ValidationError(
+			'BAD_DATE',
+			`${context}: ${formatPartial(date)} is in the future. Enter a current or past date only.`
+		);
 	}
 }
 

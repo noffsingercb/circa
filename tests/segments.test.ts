@@ -112,6 +112,79 @@ describe('deriveSegments', () => {
 		}
 	});
 
+	/*
+	 * The input side of the same mismatch. Clamping the projection stopped
+	 * Circa from GENERATING an out-of-range year; these cover a visitor TYPING
+	 * one. assertValid used to accept 1..2200 against an engine that accepts
+	 * currentYear + 1, so every year from 2028 up was one the form invited and
+	 * the API was always going to refuse -- and max="2200" on the year input
+	 * had the browser quote that impossible bound back at people.
+	 *
+	 * Relative to the current clock, for the same reason as the two above.
+	 */
+	it('rejects an event dated in a future year', () => {
+		const nextYear = new Date().getUTCFullYear() + 1;
+
+		expect(() =>
+			deriveSegments([
+				event({ id: '1', kind: 'birth', date: { year: nextYear, month: null, day: null } })
+			])
+		).toThrowError(ValidationError);
+	});
+
+	it('rejects a future date inside the current year, not just a future year', () => {
+		// Tomorrow, which is what makes this a full-date check rather than a
+		// year-granularity one. On 31 December it rolls into next year and the
+		// case above is what catches it -- equally correct, since either way the
+		// date must not be accepted.
+		const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+		expect(() =>
+			deriveSegments([
+				event({
+					id: '1',
+					kind: 'birth',
+					date: {
+						year: tomorrow.getUTCFullYear(),
+						month: tomorrow.getUTCMonth() + 1,
+						day: tomorrow.getUTCDate()
+					}
+				})
+			])
+		).toThrowError(ValidationError);
+	});
+
+	it('rejects a future date on any event kind, not only a birth', () => {
+		// A marriage or a move dated next year is exactly as impossible as a
+		// birth, and left to reach the engine it comes back as a complaint about
+		// a segment index instead of about the date.
+		const nextYear = new Date().getUTCFullYear() + 1;
+
+		expect(() =>
+			deriveSegments([
+				event({ id: '1', kind: 'birth', place: PUEBLO, date: { year: 1902, month: null, day: null } }),
+				event({ id: '2', kind: 'residence', place: CHICAGO, date: { year: nextYear, month: null, day: null } })
+			])
+		).toThrowError(ValidationError);
+	});
+
+	it('accepts an event dated today without projecting a century from it', () => {
+		// The boundary in openEndedEnd was `today <= spanStart`, so a birth dated
+		// exactly today skipped the clamp and asked for a window ending in 2126 --
+		// the same 400, for the one date a new parent is most likely to type.
+		// A window of today..today is empty, because a life a few hours old has no
+		// history around it yet, but it is valid and it is honest.
+		const today = todayISO();
+		const [year, month, day] = today.split('-').map(Number);
+
+		const segments = deriveSegments([
+			event({ id: '1', kind: 'birth', date: { year, month, day } })
+		]);
+
+		expect(segments[0].start).toBe(today);
+		expect(segments[0].end).toBe(today);
+	});
+
 	it('runs 100 years backward when there is a death but no birth', () => {
 		const segments = deriveSegments([
 			event({ id: '1', kind: 'death', place: DENVER, date: { year: 1954, month: null, day: null } })
