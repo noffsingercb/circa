@@ -27,6 +27,9 @@ import { ValidationError } from './types';
  *
  * Amended 2026-08-22:
  *  - The forward projection stops at today. See openEndedEnd.
+ *  - No event may be dated in the future at all; assertValid enforces it, so
+ *    the guard inside openEndedEnd is now unreachable from the form and
+ *    survives only for timelines rebuilt from a shared URL.
  */
 export function deriveSegments(events: LifeEvent[]): SegmentInput[] {
 	const usable = events.filter((event) => event.place !== null && hasYear(event.date));
@@ -103,17 +106,24 @@ export function deriveSegments(events: LifeEvent[]): SegmentInput[] {
  * LIFESPAN_CAP_YEARS keeps its full meaning for the case it was written for --
  * a birth long enough ago that a century still lands in the past.
  *
- * The guard on a future spanStart is not clamping a typo into looking valid.
- * A birth dated after today cannot produce a sane window, and turning it into
- * an inverted segment would trade the API's clear complaint about the year for
- * a confusing one about the ordering. It is left alone so the year itself is
- * what gets reported.
+ * THE BOUNDARY IS STRICTLY LESS THAN, and that matters. It was `today <=
+ * spanStart`, which meant a birth dated exactly today skipped the clamp and
+ * projected a century forward -- reproducing the very 400 this function was
+ * written to eliminate, for the one input a brand-new parent is most likely to
+ * type. A birth today now yields a window of today..today: empty, because a
+ * life a few hours old has no history around it yet, but valid.
+ *
+ * The remaining guard covers a spanStart genuinely AFTER today. assertValid
+ * now rejects future dates outright, so nothing typed into the form can reach
+ * it; a timeline rebuilt from a hand-edited share URL still can. It is left
+ * unclamped on purpose, so the API reports the impossible year rather than an
+ * inverted segment.
  */
 function openEndedEnd(spanStart: string): string {
 	const projected = addYears(spanStart, LIFESPAN_CAP_YEARS);
 	const today = todayISO();
 
-	if (today <= spanStart) return projected;
+	if (today < spanStart) return projected;
 	return projected < today ? projected : today;
 }
 
