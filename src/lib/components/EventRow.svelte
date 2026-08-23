@@ -33,6 +33,9 @@
 	 */
 	const MAX_YEAR = yearOf(todayISO());
 
+	let suggestions: ResolvedPlace[] = [];
+	let open = false;
+
 	function onPlaceInput(node: Event) {
 		const value = (node.currentTarget as HTMLInputElement).value;
 		event.placeQuery = value;
@@ -42,9 +45,6 @@
 			suggestions = places;
 		});
 	}
-
-	let suggestions: ResolvedPlace[] = [];
-	let open = false;
 
 	function choose(place: ResolvedPlace) {
 		event.place = place;
