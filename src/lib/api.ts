@@ -15,10 +15,21 @@ import type { CircaEntry, CircaResult, EngineConfig, SegmentInput, Timeline } fr
 export class ApiError extends Error {
 	readonly status: number;
 
-	constructor(message: string, status: number) {
+	/**
+	 * The server's own explanation, when it sent one.
+	 *
+	 * Kept separate from `message` so a caller can tell "the API stated exactly
+	 * what was wrong with this request" from "we are guessing on its behalf". A
+	 * 400 from the engine carries a sentence written to be read; a 502 from a
+	 * proxy that never reached the engine carries nothing useful at all.
+	 */
+	readonly detail: string | null;
+
+	constructor(message: string, status: number, detail: string | null = null) {
 		super(message);
 		this.name = 'ApiError';
 		this.status = status;
+		this.detail = detail;
 	}
 }
 
@@ -79,6 +90,38 @@ export function warmUp(fetchImpl: FetchLike = fetch): Promise<void> {
 	return warmUpPromise;
 }
 
+/** Longest server message we will carry into the UI. */
+const MAX_DETAIL_CHARS = 300;
+
+/**
+ * Pull the server's own explanation out of a failed response.
+ *
+ * This used to be thrown away. The old code tested `response.ok` and never
+ * touched the body, so a rejected input, a rate limit and a genuinely dead
+ * service all arrived at the UI as one indistinguishable ApiError -- and the
+ * UI, having nothing to go on, said the service was not answering.
+ *
+ * On 2026-08-23 a visitor looking up a living relative was told exactly that,
+ * while the API was in fact answering in one millisecond with
+ * `segments[0] must fall between year 1 and 2027.` The information needed to
+ * explain the failure was in the response the whole time.
+ *
+ * Never throws: a body that is empty, not JSON, or not shaped as expected is
+ * simply no detail, and the caller falls back to its own wording. Truncated
+ * because this string is rendered into the page, and a length limit on
+ * anything we did not author is cheaper than trusting one.
+ */
+async function readErrorDetail(response: Response): Promise<string | null> {
+	try {
+		const body = (await response.json()) as { error?: unknown };
+		if (typeof body?.error !== 'string') return null;
+		const detail = body.error.trim();
+		return detail === '' ? null : detail.slice(0, MAX_DETAIL_CHARS);
+	} catch {
+		return null;
+	}
+}
+
 /**
  * POST a set of segments to the engine.
  *
@@ -119,7 +162,12 @@ async function postTimeline(
 		});
 
 		if (!response.ok) {
-			throw new ApiError('The timeline service could not be reached.', response.status);
+			const detail = await readErrorDetail(response);
+			throw new ApiError(
+				detail ?? 'The timeline service could not be reached.',
+				response.status,
+				detail
+			);
 		}
 
 		return (await response.json()) as Timeline;
