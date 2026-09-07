@@ -24,7 +24,12 @@ import type { CircaEntry, Scope } from './types';
 
 export type Verdict = 'up' | 'down';
 
-/** Mirrors the SCOPES list in GeoHistory's feedback.ts, including the fifth. */
+/**
+ * Mirrors the SCOPES list in GeoHistory's feedback.ts, including the sixth:
+ * Scope now carries five values of its own (local, regional, national,
+ * global, universal as of 0.6) plus 'unclassified' here for dump rows no
+ * scope rule has touched.
+ */
 export type VoteScope = Scope | 'unclassified';
 
 /**
