@@ -167,8 +167,16 @@ export const DEATH_LOOKBACK_YEARS = num('VITE_DEATH_LOOKBACK_YEARS', 8);
 /** Most life events one person can enter in the form. */
 export const MAX_EVENTS = num('VITE_MAX_EVENTS', 20);
 
-/** Hard ceiling on rendered entries, applied after the engine responds. */
-export const GLOBAL_CAP = num('VITE_GLOBAL_CAP', 80);
+/**
+ * Hard ceiling on rendered entries, applied after the engine responds.
+ *
+ * Raised from 80 to 90 in step with MAX_PER_SEGMENT below: the universal tier
+ * (0.6) is additive on top of maxPerSegment, so a full run of MAX_SEGMENTS
+ * segments can now return up to universalQuota (2) more entries per segment
+ * than before. 90 gives that headroom rather than silently truncating the
+ * curated world-scale rows the new tier exists to surface.
+ */
+export const GLOBAL_CAP = num('VITE_GLOBAL_CAP', 90);
 
 /*
  * PX_PER_YEAR and MIN_GAP_PX were removed here.
@@ -216,37 +224,46 @@ export const RELAXED_LOCAL_FLOOR = num('VITE_RELAXED_LOCAL_FLOOR', 0.05);
 /**
  * MIRRORS DEFAULT_CONFIG.maxPerSegment (12 in the engine).
  *
- * Raised from 10 to 17, which is a bigger change than it looks. The engine
- * fills a segment by round-robin across five tiers in a fixed order --
- * local, regional, national, global, person -- taking one row per tier per
- * pass until the quotas are exhausted or maxPerSegment is hit. The quotas are
- * local 4, regional 3, national 4, global 5, person 2, totalling 18.
+ * Raised from 10 to 17 to fill the round-robin's five tiers properly (see the
+ * history below), then to 19 in 0.6 alongside the engine's new additive
+ * universal tier: universal rows are NOT subject to maxPerSegment at all (the
+ * engine draws them in a separate pass capped by universalQuota, currently 2),
+ * so this number still only governs the round-robin fill -- it is raised here
+ * only to keep pace with GLOBAL_CAP and avoid this constant reading as stale
+ * next to it.
+ *
+ * The engine fills a segment by round-robin across five tiers in a fixed
+ * order -- local, regional, national, global, person -- taking one row per
+ * tier per pass until the quotas are exhausted or maxPerSegment is hit. The
+ * quotas are local 4, regional 3, national 4, global 5, person 2, totalling 18.
  *
  * So maxPerSegment does not trim the tail evenly; it truncates mid-pass and
  * starves whichever tiers sit late in the order or have deep quotas:
  *
  *     10 (old)  ->  local 2, regional 2, national 2, global 2, person 2
  *     12        ->  local 3, regional 3, national 2, global 2, person 2
- *     17 (new)  ->  local 4, regional 3, national 4, global 4, person 2
+ *     17        ->  local 4, regional 3, national 4, global 4, person 2
  *
  * At 10 we were taking half the local quota and two fifths of the global one.
  * The complaint that good local events were missing and the complaint that
  * major world milestones were missing had the same cause, and the same fix.
  *
- * 18 would fill every quota exactly. 17 leaves global one short deliberately:
- * global is the tier that most readily supplies filler, and the density of the
- * dump's global rows is the open question tracked for the next dataset pass.
+ * 18 would fill every round-robin quota exactly. 17 (and now 19) leaves global
+ * one short deliberately: global is the tier that most readily supplies
+ * filler, and the density of the dump's global rows is the open question
+ * tracked for the next dataset pass.
  */
-export const MAX_PER_SEGMENT = num('VITE_MAX_PER_SEGMENT', 17);
+export const MAX_PER_SEGMENT = num('VITE_MAX_PER_SEGMENT', 19);
 
 /** MIRRORS DEFAULT_CONFIG.maxSegments. */
 export const MAX_SEGMENTS = num('VITE_MAX_SEGMENTS', 20);
 
 /*
  * Deliberately NOT sent: significanceFloor, scopeFloor (on the base request),
- * scopeQuota, categoryWeights and foundingKindWeights. Per-tier flood control
- * and per-scope thresholds are the engine's job, and letting its defaults
- * apply means a retune in GeoHistory reaches Circa with no release here.
+ * scopeQuota, personFloor, universalQuota, categoryWeights and
+ * foundingKindWeights. Per-tier flood control and per-scope thresholds are the
+ * engine's job, and letting its defaults apply means a retune in GeoHistory
+ * reaches Circa with no release here.
  *
  * significanceFloor is the newest and most important addition to that list.
  * Sending it at all is close to always wrong: the engine raises every scope not
