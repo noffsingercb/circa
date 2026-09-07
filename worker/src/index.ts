@@ -45,7 +45,8 @@ function verify(rawBody: string, signature: string): boolean {
 // ===================== Payload =====================
 
 const VERDICTS = new Set(["up", "down"])
-const SCOPES = new Set(["local", "regional", "national", "global", "unclassified"])
+// 'universal' added in GeoHistory 0.6 -- the curated world-scale draw tier.
+const SCOPES = new Set(["local", "regional", "national", "global", "universal", "unclassified"])
 const BUCKETS = new Set([
   "0-25", "25-50", "50-100", "100-250", "250-500",
   "500-1000", "1000-1500", "1500-2500", "2500+",
