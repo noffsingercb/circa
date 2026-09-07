@@ -40,12 +40,15 @@
 	}
 
 	/**
-	 * scope is nullable on the wire, and an unclassified row would otherwise
-	 * produce class="dot null" in the markup.
+	 * Which tier this row was drawn from, for the timeline dot's size and
+	 * colour. Added to the engine contract in 0.6 (TimelineEntry.tier), so this
+	 * no longer needs to sniff category the way it used to: a birth/death used
+	 * to be re-derived here as 'person' from category alone, and a curated
+	 * world-scale row now arrives labelled 'universal' directly rather than
+	 * falling through to its stored (and misleading) scope.
 	 */
 	function scopeClass(entry: CircaEntry): string {
-		if (entry.category === 'birth' || entry.category === 'death') return 'person';
-		return entry.scope ?? 'unknown';
+		return entry.tier ?? 'unknown';
 	}
 
 	/**
@@ -276,6 +279,20 @@
 		height: 13px;
 		border-color: var(--accent);
 		background: var(--accent);
+	}
+
+	/*
+	 * Universal rows are curated world-scale entries drawn additively (see
+	 * EntryCard's hideDistanceChip comment), so they get a dot heavier than
+	 * global's rather than a bigger version of it: a dedicated dark charcoal
+	 * rather than the accent colour keeps "drawn outside the proximity model"
+	 * visually distinct from "reached the whole world by proximity".
+	 */
+	.dot.universal {
+		width: 13px;
+		height: 13px;
+		border-color: #2f2a22;
+		background: #2f2a22;
 	}
 
 	.dot.person {
