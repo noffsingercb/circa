@@ -1,7 +1,7 @@
 /**
  * Type contract shared with the GeoHistory engine.
  *
- * The engine half of this file mirrors geohistory-core@0.5.1. It is restated
+ * The engine half of this file mirrors geohistory-core@0.6.0. It is restated
  * here rather than imported so that Circa builds and tests today, before
  * packages/geohistory-core is extracted and published. Once the package is on
  * npm, delete the ENGINE CONTRACT block and re-export from the package instead;
@@ -16,12 +16,40 @@
  */
 
 /* -------------------------------------------------------------------------- */
-/* ENGINE CONTRACT -- mirrors geohistory-core@0.5.1                           */
+/* ENGINE CONTRACT -- mirrors geohistory-core@0.6.0                           */
 /* -------------------------------------------------------------------------- */
 
 export type Precision = 'day' | 'month' | 'year' | 'decade' | 'century';
 
-export type Scope = 'local' | 'regional' | 'national' | 'global';
+/**
+ * 'universal' was added in 0.6: curated world-scale rows (WWII, the 1918 flu,
+ * the UN founding...) that the engine draws additively, outside the round-
+ * robin scopeQuota fill. See Tier/DrawTier below and core.ts's UNIVERSAL DRAW
+ * comment.
+ */
+export type Scope = 'local' | 'regional' | 'national' | 'global' | 'universal';
+
+/** The four scopes that participate in the round-robin scopeQuota fill. */
+export type RoundRobinScope = Exclude<Scope, 'universal'>;
+
+/**
+ * Draw tiers for the round-robin fill: RoundRobinScope plus 'person', which is
+ * not a scope a row can carry -- it is derived from category so births and
+ * deaths stop competing with local history. 'universal' is NOT a member: it
+ * is drawn in its own additive pass, never through the round-robin.
+ */
+export type Tier = RoundRobinScope | 'person';
+
+/** Every tier the engine can report on TimelineEntry.tier, round-robin or not. */
+export type DrawTier = Tier | 'universal';
+
+/**
+ * begins / ends / ongoing for a ranged row (date_end set) shown at the start
+ * or end of its span in this life, or where the span was already running when
+ * this life segment began. null for point events and for ranged rows that fit
+ * wholly inside one segment.
+ */
+export type Phase = 'begins' | 'ends' | 'ongoing' | null;
 
 export type PlaceLevel = 'locality' | 'county' | 'admin1' | 'country';
 
@@ -54,18 +82,20 @@ export interface EngineConfig {
 	 * default -- silently lifts the local floor from 0.05 back to 0.15 and
 	 * cancels the local-tier tuning from GeoHistory PR #8.
 	 *
-	 * It does still have one legitimate use: it is the floor applied to the
-	 * person tier (birth/death), which scopeFloor does not cover.
+	 * It does still have one legitimate use: it is the fallback floor applied to
+	 * the person tier (birth/death) when personFloor is not sent.
 	 */
 	significanceFloor?: number;
 
 	/**
-	 * Per-scope significance floors. Added in 0.5.0.
+	 * Per-scope significance floors. Added in 0.5.0; 'universal' added in 0.6
+	 * (engine default 0.85, matching the curated seed rows' hand-authored
+	 * notability floor).
 	 *
-	 * Engine defaults: local 0.05, regional 0.15, national 0.15, global 0.20.
-	 * The low local floor is deliberate -- the curated local rows average 0.133
-	 * significance, below the old uniform 0.15, which is why local history was
-	 * being filtered out before selection ever ran.
+	 * Engine defaults: local 0.05, regional 0.15, national 0.15, global 0.20,
+	 * universal 0.85. The low local floor is deliberate -- the curated local
+	 * rows average 0.133 significance, below the old uniform 0.15, which is why
+	 * local history was being filtered out before selection ever ran.
 	 *
 	 * An explicitly named scope is used as given and is NOT raised by
 	 * significanceFloor.
@@ -81,15 +111,36 @@ export interface EngineConfig {
 	 */
 	personQuota?: number;
 
+	/**
+	 * Dedicated significance floor for the person tier. Added in 0.6 (engine
+	 * default 0.3), split out from significanceFloor because the two were never
+	 * really the same number -- see core.ts's EngineConfig.personFloor comment.
+	 */
+	personFloor?: number;
+
 	maxPerSegment?: number;
 	maxSegments?: number;
-	scopeQuota?: Record<Scope, number>;
+
+	/**
+	 * Per-round-robin-scope caps. 'universal' is deliberately excluded from this
+	 * type -- it has its own dedicated universalQuota instead, since the engine
+	 * never reads scopeQuota.universal.
+	 */
+	scopeQuota?: Record<RoundRobinScope, number>;
+
+	/**
+	 * How many universal rows may be drawn per segment. Added in 0.6 (engine
+	 * default 2). Additive: universal entries sit ON TOP of maxPerSegment rather
+	 * than counting against it.
+	 */
+	universalQuota?: number;
+
 	categoryWeights?: Record<string, number>;
 
 	/**
 	 * Weights by founding kind, so a settlement founding does not carry the same
 	 * weight as a country's. Engine defaults: settlement 0.35, institution 0.50,
-	 * subnational 0.90, country 0.90.
+	 * subnational 0.90, country 0.90, city 0.60 (added in 0.6).
 	 */
 	foundingKindWeights?: Record<string, number>;
 }
@@ -125,14 +176,31 @@ export interface TimelineEntry {
 	reachKm: number;
 
 	/**
-	 * The event's stored scope -- NOT the tier it was drawn from.
+	 * The event's stored scope -- NOT the tier it was drawn from. Prefer `tier`
+	 * for rendering; keep `scope` only where the stored value itself matters
+	 * (e.g. feedback.ts, which tunes against it).
 	 *
 	 * Births and deaths keep a stored scope of 'local' while being selected from
-	 * the person tier, so a person row arrives here labelled 'local'. Rendering
-	 * this verbatim as a badge misdescribes it. Nullable because the dump has
-	 * rows no scope rule has classified.
+	 * the person tier, so a person row arrives here labelled 'local'. Nullable
+	 * because the dump has rows no scope rule has classified.
 	 */
 	scope: Scope | null;
+
+	/**
+	 * The tier this row was actually DRAWN from. Added in 0.6 so UI code no
+	 * longer has to infer it from category -- a birth stores scope='local' but
+	 * draws from 'person'; a curated world event stores and draws 'universal'.
+	 * EntryCard.svelte badges against this field, not `scope`.
+	 */
+	tier: DrawTier;
+
+	/**
+	 * begins / ends / ongoing for a ranged row shown at the start or end of its
+	 * span in this life, or where the span was already running when this life
+	 * segment began. null for point events and rows that fit wholly inside one
+	 * segment. Added in 0.6 -- see Phase.
+	 */
+	phase: Phase;
 
 	significance: number;
 
