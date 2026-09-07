@@ -28,29 +28,55 @@
 		local: 'Local',
 		regional: 'Regional',
 		national: 'National',
-		global: 'Global'
+		global: 'Global',
+		universal: 'World',
+		person: 'Person',
+		unknown: 'Unclassified'
 	};
 
 	/**
-	 * Births and deaths are drawn from the engine's person tier but keep a stored
-	 * scope of 'local', so rendering entry.scope verbatim badges David Packard's
-	 * birth as "Local" alongside genuinely local history. That misreads a working
-	 * feature as a bug -- the person tier exists precisely so people do not
-	 * consume local slots.
+	 * Title-cases a tier/scope string with no SCOPE_LABEL entry, so an unmapped
+	 * or future value still reads as "Something" rather than "something".
 	 *
-	 * The engine does not report which tier a row was drawn from, so category is
-	 * the available proxy. It is exact: PERSON_CATEGORIES in core.ts is
-	 * {birth, death}, the same test used to route the draw.
+	 * This is the fix for the Universal chip shipping lower-cased: 'universal'
+	 * had no SCOPE_LABEL entry yet, so scopeLabel fell back to the raw scope
+	 * string verbatim while every other chip went through SCOPE_LABEL's Title
+	 * Case. Falling back through capitalize() instead means a future tier this
+	 * component has not been taught about yet degrades the same way the mapped
+	 * ones look, not the way the bug did.
 	 */
-	$: isPerson = entry.category === 'birth' || entry.category === 'death';
+	function capitalize(value: string): string {
+		return value.length ? value.charAt(0).toUpperCase() + value.slice(1) : value;
+	}
 
-	$: scopeKey = isPerson ? 'person' : (entry.scope ?? 'unknown');
+	/**
+	 * Which tier this row was actually DRAWN from. Added to the engine contract
+	 * in 0.6 (TimelineEntry.tier), replacing the category-sniffing this
+	 * component used to do to detect person rows.
+	 *
+	 * Births and deaths are drawn from the engine's person tier but keep a
+	 * stored scope of 'local', so rendering entry.scope verbatim would badge
+	 * David Packard's birth as "Local" alongside genuinely local history. The
+	 * engine now reports the drawn tier directly instead of leaving the UI to
+	 * infer it from category.
+	 */
+	$: scopeKey = entry.tier ?? 'unknown';
 
-	$: scopeLabel = isPerson
-		? 'Person'
-		: entry.scope
-			? (SCOPE_LABEL[entry.scope] ?? entry.scope)
-			: 'Unclassified';
+	$: scopeLabel = SCOPE_LABEL[scopeKey] ?? capitalize(scopeKey);
+
+	/**
+	 * Appended to the displayed title, not shown as a separate chip: a ranged
+	 * row (date_end set) that begins, ends, or was already running when this
+	 * life segment began. Added to the engine contract in 0.6 (TimelineEntry.
+	 * phase); null for point events and rows that fit wholly inside one segment.
+	 */
+	const PHASE_SUFFIX: Record<string, string> = {
+		begins: ' — begins',
+		ends: ' — ends',
+		ongoing: ' — ongoing'
+	};
+
+	$: titleText = entry.displayTitle + (entry.phase ? (PHASE_SUFFIX[entry.phase] ?? '') : '');
 
 	/**
 	 * The source link, or null if it is not a plain http(s) URL.
@@ -89,6 +115,17 @@
 	 */
 	$: reachNote = `${distanceLabel} of ${formatDistance(entry.reachKm, $distanceUnit)} reach`;
 
+	/*
+	 * Universal rows are curated world-scale entries (WWII, the 1918 flu...)
+	 * drawn additively rather than by proximity, so a plain distance chip beside
+	 * one reads as a claim the row was not selected on: "340 km" implies
+	 * closeness mattered here the way it does for a local or regional row, when
+	 * it did not. The debug reach chip stays even for universal rows -- it is a
+	 * tuning tool, not a visitor-facing claim, and hiding it there would hide
+	 * exactly the number that explains why a universal draw sits where it does.
+	 */
+	$: hideDistanceChip = scopeKey === 'universal';
+
 	/* ---------------------------------------------------------------------- */
 	/* Feedback                                                               */
 	/* ---------------------------------------------------------------------- */
@@ -117,14 +154,14 @@
 	<p class="date">{entry.date}</p>
 	<h3>
 		<!--
-			displayTitle, not title. The dump titles rows after entities, so title
-			holds "Oklahoma" where displayTitle holds "Oklahoma Statehood", and
-			"Insulin" where displayTitle holds "Discovery of Insulin". The engine
-			guarantees displayTitle is populated, falling back to title itself, so
-			no fallback is needed here.
+			displayTitle, not title, plus the phase suffix computed above. The dump
+			titles rows after entities, so title holds "Oklahoma" where displayTitle
+			holds "Oklahoma Statehood", and "Insulin" where displayTitle holds
+			"Discovery of Insulin". The engine guarantees displayTitle is populated,
+			falling back to title itself, so no fallback is needed here.
 		-->
 		{#if sourceHref}
-			<a href={sourceHref} target="_blank" rel="noopener noreferrer">{entry.displayTitle}</a>
+			<a href={sourceHref} target="_blank" rel="noopener noreferrer">{titleText}</a>
 		{:else}
 			<!--
 				Dump rows without a source link render as plain text rather than as a
@@ -132,7 +169,7 @@
 				too, which is the right outcome: the title still reads, and nothing
 				unvouched-for becomes clickable.
 			-->
-			<span>{entry.displayTitle}</span>
+			<span>{titleText}</span>
 		{/if}
 	</h3>
 	{#if entry.blurb}
@@ -144,11 +181,12 @@
 			<!--
 				One number for a visitor, and no tooltip hiding a second one. Reach is
 				ours rather than theirs, so it appears only once switched on, dashed,
-				so a screenshot taken in that mode is recognisable as one.
+				so a screenshot taken in that mode is recognisable as one. The plain
+				distance chip is skipped for universal rows -- see hideDistanceChip.
 			-->
 			{#if $showReach}
 				<span class="chip debug">{reachNote}</span>
-			{:else}
+			{:else if !hideDistanceChip}
 				<span class="chip">{distanceLabel}</span>
 			{/if}
 			{#if entry.relaxed}
@@ -313,7 +351,8 @@
 	}
 
 	.chip.scope.national,
-	.chip.scope.global {
+	.chip.scope.global,
+	.chip.scope.universal {
 		background: var(--accent-soft);
 		border-color: #e0cdb4;
 		color: #6d4419;
