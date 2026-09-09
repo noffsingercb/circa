@@ -1,7 +1,7 @@
 /**
  * Type contract shared with the GeoHistory engine.
  *
- * The engine half of this file mirrors geohistory-core@0.6.0. It is restated
+ * The engine half of this file mirrors geohistory-core@0.6.1. It is restated
  * here rather than imported so that Circa builds and tests today, before
  * packages/geohistory-core is extracted and published. Once the package is on
  * npm, delete the ENGINE CONTRACT block and re-export from the package instead;
@@ -16,7 +16,7 @@
  */
 
 /* -------------------------------------------------------------------------- */
-/* ENGINE CONTRACT -- mirrors geohistory-core@0.6.0                           */
+/* ENGINE CONTRACT -- mirrors geohistory-core@0.6.1                           */
 /* -------------------------------------------------------------------------- */
 
 export type Precision = 'day' | 'month' | 'year' | 'decade' | 'century';
@@ -169,6 +169,30 @@ export interface TimelineEntry {
 	date: string;
 	dateStartISO: string;
 	dateEndISO: string;
+
+	/**
+
+	 * The ISO day this entry renders and SORTS at, already resolved for phase
+
+	 * by the engine: 'ends' -> dateEndISO, 'ongoing' -> the life segment's
+
+	 * start, otherwise dateStartISO. Added in engine 0.6.1.
+
+	 *
+
+	 * Sort and group on this, never on dateStartISO. Sorting on dateStartISO
+
+	 * is what put a 'Cold War -- ends' card at 1947 and a 'Great Depression
+
+	 * -- ongoing' card above the 1935 BORN node.
+
+	 */
+
+	displayDateISO: string;
+
+	/** How much of displayDateISO is real. Use for formatting, not sorting. */
+
+	displayPrecision: Precision;
 	precision: Precision;
 	lat: number;
 	lng: number;
