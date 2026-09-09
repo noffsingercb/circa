@@ -79,8 +79,8 @@
 		const rows: Row[] = entries.map((entry) => ({
 			kind: 'entry' as const,
 			key: `entry:${entry.id}`,
-			iso: entry.dateStartISO,
-			year: yearOfIso(entry.dateStartISO),
+			iso: entry.displayDateISO,
+			year: yearOfIso(entry.displayDateISO),
 			entry
 		}));
 

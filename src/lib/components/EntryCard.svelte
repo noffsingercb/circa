@@ -76,7 +76,21 @@
 		ongoing: ' — ongoing'
 	};
 
-	$: titleText = entry.displayTitle + (entry.phase ? (PHASE_SUFFIX[entry.phase] ?? '') : '');
+	// A few authored universal rows carry the verb in the title already
+  // ('Industrial Revolution begins', 'The Reformation begins'), so appending
+  // the phase produced 'Industrial Revolution begins - begins'. Anchored to
+  // the end of the string, so 'The War That Ended Wars' is not a match.
+  //
+  // Inlined rather than pulled out into a helper so this compiles the same
+  // whether or not this component's script block is typed.
+  const TITLE_STATES_PHASE =
+    /\b(begins?|began|beginning|starts?|started|ends?|ended|ending|opens?|opened|closes?|closed)\s*$/i;
+
+  $: titleText =
+    entry.displayTitle +
+    (entry.phase && !TITLE_STATES_PHASE.test(entry.displayTitle.trim())
+      ? (PHASE_SUFFIX[entry.phase] ?? '')
+      : '');
 
 	/**
 	 * The source link, or null if it is not a plain http(s) URL.

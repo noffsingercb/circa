@@ -45,12 +45,22 @@ function entry(over: Partial<CircaEntry> = {}): CircaEntry {
 		date: '1907',
 		dateStartISO: '1907-11-16',
 		dateEndISO: '1907-11-16',
+		// Required as of engine 0.6.1. This row is a point event, so its
+		// display date is simply its start date and its precision is 'day'.
+		displayDateISO: '1907-11-16',
+		displayPrecision: 'day',
 		precision: 'day',
 		lat: 35.5,
 		lng: -97.5,
 		distanceKm: 120,
 		reachKm: 1500,
 		scope: 'national',
+		// Required since 0.6. The tier a row was DRAWN from, which for this
+		// non-person row is the same as its stored scope.
+		tier: 'national',
+		// Required since 0.6. null = a point event, or a ranged row wholly
+		// inside one segment. This fixture is a single-day milestone.
+		phase: null,
 		significance: 0.62,
 		category: 'milestone',
 		sourceUrl: null,
