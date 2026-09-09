@@ -29,8 +29,12 @@ Circa is a static front end. All of the historical reasoning happens in the
    carries its own `reach_km`, derived from its scope and significance, and it matches a segment
    when the segment's point falls inside that reach. A parish fire reaches 30 km; a world war
    reaches everywhere.
-4. **Circa renders the result.** Dots are weighted by scope, each entry shows how far it travelled
-   relative to its reach, and anything that only surfaced under a lowered bar is flagged.
+4. **Circa renders the result.** Rows are positioned, keyed and year-labelled on the entry's
+   `displayDateISO`, not its `dateStartISO` — a ranged event drawn as `ends` carries the year it
+   ended, and one drawn as `ongoing` carries the year the segment began. Titles that already state
+   their own phase ("Industrial Revolution begins") get no phase suffix appended. Dots are weighted
+   by scope, each entry shows how far it travelled relative to its reach, and anything that only
+   surfaced under a lowered bar is flagged.
 
 The direction matters. Casting a fixed radius out from the *person* buries a city dweller in
 parish-level noise while missing the distant war that shaped their life. Casting each *event's own*
@@ -58,7 +62,7 @@ The file separates two kinds of value, and the distinction is the whole point:
 | --- | --- | --- |
 | `LIFESPAN_CAP_YEARS` | `100` | Window assumed when only a birth or only a death is given |
 | `MAX_EVENTS` | `20` | Most life-event rows the form accepts |
-| `GLOBAL_CAP` | `80` | Ceiling on rendered entries, trimmed by score then re-sorted by date |
+| `GLOBAL_CAP` | `90` | Ceiling on rendered entries, trimmed by score then re-sorted by date. Raised from 80 in step with `MAX_PER_SEGMENT` below, to make room for the universal tier |
 | `DEATH_LOOKBACK_YEARS` | `8` | How far back a death-anchored final segment reaches |
 | `REQUEST_TIMEOUT_MS` | `45_000` | Timeline request timeout; generous because a free-tier API cold start can take most of a minute |
 | `WARMUP_TIMEOUT_MS` | `60_000` | Budget for the fire-and-forget health ping on page load |
@@ -72,7 +76,7 @@ wire, which means **it overrides the engine's own defaults for these keys**.
 
 | Value | Default | Mirrors |
 | --- | --- | --- |
-| `MAX_PER_SEGMENT` | `17` | `DEFAULT_CONFIG.maxPerSegment` (engine default is 12) |
+| `MAX_PER_SEGMENT` | `19` | `DEFAULT_CONFIG.maxPerSegment` (engine default is 12). Raised 10 -> 17 -> 19; the last step landed with the v0.6 universal tier |
 | `MAX_SEGMENTS` | `20` | `DEFAULT_CONFIG.maxSegments` |
 
 `RELAXED_LOCAL_FLOOR` (`0.05`) and `MIN_MATCHES` (`3`) are the sparsity backstop: if a segment
@@ -82,11 +86,11 @@ It is sent as `scopeFloor.local` rather than as a scalar `significanceFloor` on 
 would also lower the birth/death floor and flood a thin segment with minor local figures.
 
 **No floor is sent on the normal request.** The engine keeps a separate floor per scope (local 0.05,
-regional 0.15, national 0.15, global 0.20) and a scalar `significanceFloor` is applied as a blanket
-minimum to every scope not named explicitly — so the old `BASE_FLOOR=0.15` was quietly lifting the
-local floor from 0.05 to 0.15 and filtering out curated local rows, which average 0.133. The
-engine's tuned defaults now stand, which also closes the drift this section used to warn about: a
-retune of the floor in GeoHistory reaches Circa with no release here.
+regional 0.15, national 0.15, global 0.20, universal 0.85) and a scalar `significanceFloor` is
+applied as a blanket minimum to every scope not named explicitly — so the old `BASE_FLOOR=0.15` was
+quietly lifting the local floor from 0.05 to 0.15 and filtering out curated local rows, which
+average 0.133. The engine's tuned defaults now stand, which also closes the drift this section used
+to warn about: a retune of the floor in GeoHistory reaches Circa with no release here.
 
 `scopeQuota` and `categoryWeights` are **deliberately not sent** either. Per-tier flood control is
 the engine's job.
@@ -150,10 +154,15 @@ Two things about the hosted API are worth knowing:
 
 ### A note on `src/lib/types.ts`
 
-The engine half of that file restates the geohistory-core@0.5.1 contract rather than importing it,
+The engine half of that file restates the geohistory-core@0.6.1 contract rather than importing it,
 so that Circa builds today, before `packages/geohistory-core` is extracted and published. Once the
 package exists, delete that block and re-export from the package — the names are identical on
 purpose. Only shapes are duplicated, never logic.
+
+`src/lib/phase-display.ts` is the same arrangement for behavior rather than shape: it is a vendored
+copy of the engine's `phase-display.ts`, so that a phase's display date resolves identically on both
+sides of the wire. It exists because a cross-repo relative import does not survive a build. Change
+it in GeoHistory first, then copy it here; never the other way round.
 
 ---
 
@@ -279,7 +288,7 @@ a pixel height either way.
 
 ### Dataset-supplied links
 
-`entry.sourceUrl` arrives from the API, which serves it from ~107k rows harvested out of Wikidata,
+`entry.sourceUrl` arrives from the API, which serves it from ~116k rows harvested out of Wikidata,
 and it is rendered as an `href`. [`src/lib/url.ts`](src/lib/url.ts) allowlists `http:` and `https:`
 using the browser's own URL parser; anything else renders as plain text instead of a link. The CSP
 also blocks `javascript:` navigation, but that is the backstop — a header can be dropped by a proxy
@@ -418,6 +427,7 @@ src/lib/share.ts             timeline <-> URL fragment payload
 src/lib/feedback.ts          thumbs up/down vote payload
 src/lib/debug.ts             reach visibility (Ctrl+Alt+R, ?debug=1)
 src/lib/url.ts               scheme allowlist for dataset-supplied links
+src/lib/phase-display.ts     VENDORED from the engine: phase -> display date. Edit it there first
 src/lib/components/          form rows, timeline, entry cards
 src/routes/+page.svelte      the full page
 src/routes/embed/            chromeless build for iframing
@@ -425,7 +435,8 @@ scripts/gen-headers.mjs      generates build/_headers at build time
 scripts/inline-script-hashes.mjs   hashes the inline scripts the build emitted
 scripts/check-inline-hashes.mjs    CI: every inline script is hashed in every policy
 static/                      public pages (why, how it works, resources, FAQ) + theme + icons
-tests/                       segment derivation, geocoding, sharing, sessions, URL allowlist
+tests/                       segment derivation, geocoding, sharing, sessions, URL allowlist,
+                             phase -> display-date resolution, phase-suffix guard
 ```
 
 Vitest collects `tests/**/*.test.ts` only (see `vite.config.ts`), so a test placed next to the module
