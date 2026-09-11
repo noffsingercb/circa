@@ -275,7 +275,7 @@
 
 			<!-- $timelineEvents, not $events: the rail describes the request that was
 			     answered, and the live form does not emit on every keystroke anyway. -->
-			<TimelineView data={$result} lifeEvents={$timelineEvents} />
+			<TimelineView data={$result} lifeEvents={$timelineEvents} filterable />
 		</div>
 	{/if}
 </main>

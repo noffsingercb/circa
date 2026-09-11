@@ -19,7 +19,10 @@ function entry(overrides: Partial<CircaEntry> & { id: string }): CircaEntry {
 		blurb: null,
 		date: '1950',
 		dateStartISO: '1950-01-01',
-		dateEndISO: null,
+		// Not nullable in the engine contract: TimelineEntry.dateEndISO is a plain
+		// string, unlike blurb/scope/category/sourceUrl. Point rows carry a copy of
+		// the start date rather than null.
+		dateEndISO: '1950-01-01',
 		displayDateISO: '1950-01-01',
 		displayPrecision: 'year',
 		precision: 'year',

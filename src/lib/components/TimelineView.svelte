@@ -1,6 +1,8 @@
 <script lang="ts">
 	import EntryCard from '$lib/components/EntryCard.svelte';
+	import FilterChips from '$lib/components/FilterChips.svelte';
 	import { isoStart } from '$lib/dates';
+	import { applyFilters, availableChips } from '$lib/filters';
 	import { decadeOfIso } from '$lib/feedback';
 	import { segments } from '$lib/session';
 	import type { CircaEntry, CircaResult, LifeEvent, SegmentInput } from '$lib/types';
@@ -14,6 +16,42 @@
 	 * in the embed route where there is no form to supply them.
 	 */
 	export let lifeEvents: LifeEvent[] = [];
+
+	/**
+	 * Whether to offer the filter chips.
+	 *
+	 * Off by default so the embed route is untouched: that build is chromeless
+	 * by design and is iframed into someone else's page, where the controls
+	 * belong to the host. Only the main route opts in.
+	 */
+	export let filterable = false;
+
+	/**
+	 * The ids of chips switched OFF, so an empty set means everything shows --
+	 * the default this feature specifies. Storing the negative also means a
+	 * category added to the dataset tomorrow defaults to visible rather than
+	 * defaulting to hidden because no chip vouched for it.
+	 *
+	 * Component state rather than a store, and not persisted: Circa's standing
+	 * promise is no cookies and no storage, so a localStorage key needs the
+	 * footer and FAQ copy checked first. A refresh clears it, which is the same
+	 * trade the rest of the app already makes.
+	 */
+	let hidden = new Set<string>();
+
+	/**
+	 * Reassigned rather than mutated. Svelte's reactivity is assignment-based,
+	 * so hidden.add(id) would change the set without redrawing a thing.
+	 */
+	function toggle(id: string): void {
+		const next = new Set(hidden);
+		if (!next.delete(id)) next.add(id);
+		hidden = next;
+	}
+
+	function showAll(): void {
+		hidden = new Set<string>();
+	}
 
 	/**
 	 * A single row of the timeline: either something the engine returned or
@@ -124,8 +162,27 @@
 		return age < 0 ? null : age;
 	}
 
-	$: entries = data.entries;
+	$: allEntries = data.entries;
+
+	// A new timeline is a new question. Carrying a mask across from the last
+	// one would hide rows the visitor has never seen, with the only evidence
+	// being a chip they pressed minutes ago on somebody else's life.
+	$: if (data) hidden = new Set<string>();
+
+	// Derived from the UNFILTERED entries. Deriving them from the filtered
+	// list would make a chip vanish the moment it was switched off, leaving
+	// no control on the page to switch it back on.
+	$: chips = availableChips(allEntries);
+
+	$: entries = filterable ? applyFilters(allEntries, hidden) : allEntries;
 	$: rows = buildRows(entries, lifeEvents);
+
+	// A fraction only while something is masked, so an unfiltered timeline
+	// still reads '27 events' rather than '27 of 27 events'.
+	$: countLabel =
+		entries.length === allEntries.length
+			? String(entries.length)
+			: entries.length + ' of ' + allEntries.length;
 	$: firstYear = rows.length ? rows[0].year : 0;
 	$: lastYear = rows.length ? rows[rows.length - 1].year : 0;
 
@@ -142,11 +199,15 @@
 	$: ages = rows.map((row, index) => (yearShown[index] ? ageAt(row, birthYear) : null));
 </script>
 
-{#if entries.length === 0}
+{#if allEntries.length === 0}
 	<p class="empty">
 		Nothing in the record reached those places in those years. Try a wider span or a nearby city.
 	</p>
 {:else}
+	{#if filterable}
+		<FilterChips scope={chips.scope} category={chips.category} {hidden} {toggle} {showAll} />
+	{/if}
+
 	{#if data.relaxedSegments.length > 0}
 		<p class="notice no-print">
 			Little was recorded near some stretches of this life, so the bar for inclusion was lowered
@@ -154,6 +215,12 @@
 		</p>
 	{/if}
 
+	{#if entries.length === 0}
+		<p class="empty">
+			Every kind of event on this timeline is switched off, so there is nothing left to show.
+			Turn one back on, or press Show all.
+		</p>
+	{:else}
 	<ol class="timeline">
 		<div class="rail" aria-hidden="true"></div>
 
@@ -190,9 +257,10 @@
 			</li>
 		{/each}
 	</ol>
+	{/if}
 
 	<p class="provenance">
-		{entries.length} events · {firstYear}–{lastYear} · dataset {data.datasetVersion} · {data.generatedWith}
+		{countLabel} events · {firstYear}–{lastYear} · dataset {data.datasetVersion} · {data.generatedWith}
 	</p>
 {/if}
 
