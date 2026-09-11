@@ -175,6 +175,11 @@ export const MAX_EVENTS = num('VITE_MAX_EVENTS', 20);
  * segments can now return up to universalQuota (2) more entries per segment
  * than before. 90 gives that headroom rather than silently truncating the
  * curated world-scale rows the new tier exists to surface.
+ *
+ * As of geohistory-core@0.7.0 that headroom reasoning no longer applies: the
+ * engine draws the entire curated universal pool rather than 2 per segment.
+ * capEntries() in api.ts now exempts universal rows from this ceiling outright,
+ * so 90 governs ambient history only.
  */
 export const GLOBAL_CAP = num('VITE_GLOBAL_CAP', 90);
 
@@ -227,7 +232,8 @@ export const RELAXED_LOCAL_FLOOR = num('VITE_RELAXED_LOCAL_FLOOR', 0.05);
  * Raised from 10 to 17 to fill the round-robin's five tiers properly (see the
  * history below), then to 19 in 0.6 alongside the engine's new additive
  * universal tier: universal rows are NOT subject to maxPerSegment at all (the
- * engine draws them in a separate pass capped by universalQuota, currently 2),
+ * engine draws them in a separate pass capped by universalQuota, which as of
+ * geohistory-core@0.7.0 defaults to 40 so the whole curated pool draws),
  * so this number still only governs the round-robin fill -- it is raised here
  * only to keep pace with GLOBAL_CAP and avoid this constant reading as stale
  * next to it.
