@@ -242,14 +242,25 @@ export async function fetchTimeline(
  * Trim to the global ceiling by score, then order by date for rendering.
  * Trimming by score rather than by date keeps the cut from lopping off the end
  * of a long life.
+ *
+ * Universal rows are EXEMPT from the ceiling entirely. The cap exists to bound
+ * ambient history; a curated world-scale row is never the thing that should be
+ * dropped to fit a budget. Before geohistory-core@0.7.0 the engine capped that
+ * tier itself at universalQuota 2, and 90 was sized to leave room for it -- so
+ * this used to be safe by accident. The engine now draws the whole curated
+ * pool, which is bounded by the seed file (34 rows) rather than by the request,
+ * so appending them unconditionally cannot run away.
  */
 export function capEntries(entries: CircaEntry[]): CircaEntry[] {
-	const kept =
-		entries.length > GLOBAL_CAP
-			? [...entries].sort((a, b) => b.score - a.score).slice(0, GLOBAL_CAP)
-			: [...entries];
+	const universal = entries.filter((entry) => entry.tier === 'universal');
+	const ambient = entries.filter((entry) => entry.tier !== 'universal');
 
-	return kept.sort(
+	const kept =
+		ambient.length > GLOBAL_CAP
+			? [...ambient].sort((a, b) => b.score - a.score).slice(0, GLOBAL_CAP)
+			: [...ambient];
+
+	return [...kept, ...universal].sort(
 		(a, b) => a.dateStartISO.localeCompare(b.dateStartISO) || a.id.localeCompare(b.id)
 	);
 }

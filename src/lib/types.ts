@@ -1,7 +1,7 @@
 /**
  * Type contract shared with the GeoHistory engine.
  *
- * The engine half of this file mirrors geohistory-core@0.6.1. It is restated
+ * The engine half of this file mirrors geohistory-core@0.7.0. It is restated
  * here rather than imported so that Circa builds and tests today, before
  * packages/geohistory-core is extracted and published. Once the package is on
  * npm, delete the ENGINE CONTRACT block and re-export from the package instead;
@@ -16,7 +16,7 @@
  */
 
 /* -------------------------------------------------------------------------- */
-/* ENGINE CONTRACT -- mirrors geohistory-core@0.6.1                           */
+/* ENGINE CONTRACT -- mirrors geohistory-core@0.7.0                           */
 /* -------------------------------------------------------------------------- */
 
 export type Precision = 'day' | 'month' | 'year' | 'decade' | 'century';
@@ -129,8 +129,13 @@ export interface EngineConfig {
 	scopeQuota?: Record<RoundRobinScope, number>;
 
 	/**
-	 * How many universal rows may be drawn per segment. Added in 0.6 (engine
-	 * default 2). Additive: universal entries sit ON TOP of maxPerSegment rather
+	 * How many universal rows may be drawn per segment. Added in 0.6; the engine
+	 * default was 2 until geohistory-core@0.7.0 raised it to 40, which sits above
+	 * the 34-row curated seed, so the whole pool draws. Circa deliberately does
+	 * NOT send this field, so that engine default reaches production without a
+	 * Circa release of its own.
+	 *
+	 * Additive: universal entries sit ON TOP of maxPerSegment rather
 	 * than counting against it.
 	 */
 	universalQuota?: number;
