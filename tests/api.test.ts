@@ -5,12 +5,12 @@ import type { CircaEntry } from '../src/lib/types';
 
 /**
  * A complete CircaEntry with the fields this suite does not care about filled
- * in. Spelled out rather than cast from a partial so that a future engine
- * field arriving in types.ts breaks these tests loudly instead of leaving them
- * asserting against a shape the engine no longer sends.
+ * in. The base is annotated rather than cast from a partial so that a future
+ * engine field arriving in types.ts breaks these tests loudly instead of
+ * leaving them asserting against a shape the engine no longer sends.
  */
 function entry(overrides: Partial<CircaEntry> & { id: string }): CircaEntry {
-	return {
+	const base: CircaEntry = {
 		id: overrides.id,
 		title: overrides.id,
 		displayTitle: overrides.id,
@@ -33,9 +33,10 @@ function entry(overrides: Partial<CircaEntry> & { id: string }): CircaEntry {
 		sourceUrl: null,
 		segmentIndex: 0,
 		score: 0.5,
-		relaxed: false,
-		...overrides
+		relaxed: false
 	};
+
+	return { ...base, ...overrides };
 }
 
 /** `count` ambient rows, each scoring below any universal row in these tests. */
