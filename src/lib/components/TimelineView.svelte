@@ -116,7 +116,14 @@
 	function buildRows(entries: CircaEntry[], life: LifeEvent[]): Row[] {
 		const rows: Row[] = entries.map((entry) => ({
 			kind: 'entry' as const,
-			key: `entry:${entry.id}`,
+			// Keyed on the occurrence rather than the row. A ranged event that
+// spans more than one life segment is returned once per occurrence --
+// the 'begins' card and the 'ends' card share entry.id -- so keying
+// on the id alone produces duplicate keys. Svelte reports those only
+// in dev; the production build silently reuses and misplaces the
+// node, which is what put two Seven Years' War cards above the Born
+// tile with an empty year gutter.
+key: `entry:${entry.id}:${entry.segmentIndex}:${entry.phase ?? ''}`,
 			iso: entry.displayDateISO,
 			year: yearOfIso(entry.displayDateISO),
 			entry
