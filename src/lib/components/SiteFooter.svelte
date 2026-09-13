@@ -15,6 +15,12 @@
 	That is the accepted cost of not building a shared component system for five
 	pages -- see the comment in site.css.
 
+	IMPORTANT: the link list is duplicated too, in all five static pages. A new
+	destination has to be added in six places or the nav disagrees with itself
+	depending on where you landed. /releases shipped without this file and was
+	missing from the app, which is the page most visitors see. If a seventh link
+	ever appears, build the shared include instead.
+
 	data-sveltekit-reload on every internal link: these are static HTML files,
 	not routes in this app. Without it the client-side router would try to
 	handle the navigation itself, find no matching route, and fall through to
@@ -26,6 +32,7 @@
 		<a href="/how-it-works" data-sveltekit-reload>How this works</a>
 		<a href="/resources" data-sveltekit-reload>Resources</a>
 		<a href="/faq" data-sveltekit-reload>FAQ</a>
+		<a href="/releases" data-sveltekit-reload>Releases</a>
 		<span class="spacer"></span>
 		<!-- External, so no data-sveltekit-reload: the router never intercepts a
 		     cross-origin href. -->
