@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="referrer" content="no-referrer" />
+		<title>Releases — Circa</title>
+		<meta
+			name="description"
+			content="What has changed in Circa and in the history behind it, newest first."
+		/>
+		<link rel="stylesheet" href="/theme.css" />
+		<link rel="stylesheet" href="/site.css" />
+		<!--
+			Page-local, because the tiles exist nowhere else on the site. Keeping
+			them out of site.css leaves the shared file to the four pages that
+			share a shape, and a separate file rather than an inline <style> keeps
+			the CSP header check as it is.
+		-->
+		<link rel="stylesheet" href="/releases/releases.css" />
+	</head>
+	<body>
+		<header class="site-header">
+			<a class="wordmark" href="/">Circa</a>
+		</header>
+
+		<main class="prose">
+			<h1>Releases</h1>
+			<p class="lede">
+				What has changed in Circa, and in the history behind it. Newest first.
+			</p>
+
+			<!--
+				One tile per release, and only for changes a visitor can actually
+				notice. A CI guard, a checksum pin or a rescore with no visible effect
+				does not earn an entry here; the repository history is the place for
+				those. Nothing unbuilt is announced either, so the page can never owe
+				anyone a feature.
+			-->
+			<div class="feed">
+				<article class="release">
+					<p class="when">September 2026 <span class="latest">Latest</span></p>
+					<h2>Fewer repeats, and you can now filter your timeline</h2>
+					<ul>
+						<li>
+							Chips above each timeline let you narrow it by how far an event reached and by what
+							kind of event it was.
+						</li>
+						<li>
+							A few hundred duplicate entries were merged in the history itself, keeping the better
+							title and description of each pair. More will follow.
+						</li>
+						<li>
+							World-reaching moments such as the moon landing now always appear, instead of being
+							crowded out of a busy timeline.
+						</li>
+						<li>
+							Long events no longer show a stray extra card near the start of a life when they span
+							several decades.
+						</li>
+					</ul>
+				</article>
+			</div>
+
+			<p class="note">
+				Spotted something that looks wrong, or an event that should be here and is not? The
+				suggestion link at the foot of any timeline is the best way to reach us, and the thumbs on
+				each card feed straight into the scoring.
+			</p>
+		</main>
+
+		<footer class="site-footer">
+			<div class="inner">
+				<a href="/">Circa App</a>
+				<a href="/why">Why this exists</a>
+				<a href="/how-it-works">How this works</a>
+				<a href="/resources">Resources</a>
+				<a href="/faq">FAQ</a>
+				<a href="/releases">Releases</a>
+				<span class="spacer"></span>
+				<a class="who" href="https://www.linkedin.com/in/noffsingercb/" rel="noopener">
+					By Ben Noffsinger
+				</a>
+			</div>
+		</footer>
+	</body>
+</html>
