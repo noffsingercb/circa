@@ -7,7 +7,7 @@
 		<title>Frequently Asked Questions — Circa</title>
 		<meta
 			name="description"
-			content="What Circa keeps, how share links work, what happens when you rate a tile, and what to do with a partial date."
+			content="What Circa keeps, how filtering works, why an event can appear twice, how share links work, and what to do with a partial date."
 		/>
 		<link rel="stylesheet" href="/theme.css" />
 		<link rel="stylesheet" href="/site.css" />
@@ -35,9 +35,79 @@
 						person's name — the form asks for a place and a date, and that is all it has ever
 						asked for. So there is no history of who you looked up, because Circa was never told.
 					</p>
+					<!--
+						This paragraph used to read "close the tab and the timeline is
+						gone", which was true when the app remembered nothing at all. Share
+						links carry their events in the URL, and filter state is on its way
+						to being remembered between visits, so the absolute version was
+						about to become false. The commitment stated here is the one that
+						holds either way: nothing personal, and nothing on a server.
+					-->
 					<p>
-						Close the tab and the timeline is gone. Come back tomorrow and Circa will not know you
-						were here.
+						Nothing personal is kept, and nothing is kept on a server. Your browser may remember
+						small conveniences for you, like which filter chips you last had switched on, and a
+						timeline you choose to share carries its details inside the link so the page can rebuild
+						itself. There is no account, no profile and no record here for any of it to attach to.
+					</p>
+				</div>
+			</details>
+
+			<details class="qa">
+				<summary>Can I see only local events, or only the big ones?</summary>
+				<div class="answer">
+					<p>
+						Yes. Above every timeline there are two rows of chips. Reach narrows by how widely an
+						event mattered, from Local up to World, and Kind narrows by what sort of event it was,
+						such as People, Conflict or Discoveries. You can mix the two.
+					</p>
+					<p>
+						Filtering happens in your browser on the timeline you already have, so it is instant and
+						nothing is lost. Switch a chip back on and those events come straight back. Turning
+						everything except Local off is a lovely way to read just the texture of a place.
+					</p>
+				</div>
+			</details>
+
+			<details class="qa">
+				<summary>Why am I seeing the same event twice?</summary>
+				<div class="answer">
+					<p>
+						Usually because a long event is showing you both of its ends. A war that ran for seven
+						years touched a life twice, so it appears where it began and again where it finished.
+						That pair is working as intended.
+					</p>
+					<p>
+						Sometimes it is a genuine double, where the same moment reached Circa through two
+						different sources and arrived as two cards. A large clean-up in September 2026 merged a
+						few hundred of these, and more will follow as they are found. If you spot one, the
+						suggestion link at the foot of your timeline is the quickest way to tell us.
+					</p>
+				</div>
+			</details>
+
+			<details class="qa">
+				<summary>Why did my first timeline take so long?</summary>
+				<div class="answer">
+					<p>
+						The history service rests when nobody is using it, and waking it up can take the better
+						part of a minute. The first timeline of the day is the slow one. Everything after it is
+						quick.
+					</p>
+					<p>Circa starts waking the service while you fill in the form, so the wait is usually hidden.</p>
+				</div>
+			</details>
+
+			<details class="qa">
+				<summary>Why is the moon landing on my small-town timeline?</summary>
+				<div class="answer">
+					<p>
+						Because a handful of moments reached everyone alive at the time, and Circa shows those
+						wherever your person was. They are marked World in the Reach chips, and they are there on
+						purpose: they were part of that life too, however far from the centre of things it was
+						lived.
+					</p>
+					<p>
+						If you would rather read the timeline without them, switch the World chip off.
 					</p>
 				</div>
 			</details>
@@ -102,6 +172,11 @@
 						matches from its centre, which can be a long way from anywhere a person actually stood,
 						and Circa says so when it happens.
 					</p>
+					<p>
+						The same goes for the history itself. A card showing only a year means the year is all
+						the record gives, and Circa would rather show you a smaller, honest claim than invent a
+						day to make the page look tidy.
+					</p>
 				</div>
 			</details>
 
@@ -116,6 +191,11 @@
 					<p>
 						The national and global events in your timeline are unaffected — those reach
 						everywhere, including places the record has little to say about.
+					</p>
+					<p>
+						Getting more local history into the record is the work we care most about, because it is
+						the part of a timeline nobody else can tell you. If you know something that belongs
+						there, please suggest it from the foot of your timeline.
 					</p>
 				</div>
 			</details>
@@ -149,6 +229,7 @@
 				<a href="/how-it-works">How this works</a>
 				<a href="/resources">Resources</a>
 				<a href="/faq">FAQ</a>
+				<a href="/releases">Releases</a>
 				<span class="spacer"></span>
 				<a class="who" href="https://www.linkedin.com/in/noffsingercb/" rel="noopener">
 					By Ben Noffsinger
