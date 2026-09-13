@@ -3,6 +3,7 @@
 	import { warmUp } from '$lib/api';
 	import EventForm from '$lib/components/EventForm.svelte';
 	import SiteFooter from '$lib/components/SiteFooter.svelte';
+	import SuggestLink from '$lib/components/SuggestLink.svelte';
 	import TimelineView from '$lib/components/TimelineView.svelte';
 	import { listenForReachKey, REACH_KEY_HINT, reachArmed, showReach } from '$lib/debug';
 	import { decodeShare, encodeShare } from '$lib/share';
@@ -276,6 +277,11 @@
 			<!-- $timelineEvents, not $events: the rail describes the request that was
 			     answered, and the live form does not emit on every keystroke anyway. -->
 			<TimelineView data={$result} lifeEvents={$timelineEvents} filterable />
+
+			<!-- Inside the results block on purpose: the ask only makes sense to
+			     someone looking at a timeline, so it cannot appear on the landing
+			     page, mid-request, or on the written pages. -->
+			<SuggestLink />
 		</div>
 	{/if}
 </main>
