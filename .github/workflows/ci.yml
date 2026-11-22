@@ -14,9 +14,14 @@ jobs:
       # cache: npm requires a lockfile, which this repo lacked until
       # 2026-07-31. Both halves of that wait are now over: the cache is on,
       # and the install below is npm ci rather than npm install.
+      #
+      # .node-version is the single source of truth for the Node version: this
+      # step reads it, and Cloudflare Pages reads the same file for the
+      # production build. Pinned exactly; Node 20 went end of life on
+      # 2026-04-30 and missed the 2026-10-21 security release.
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: .node-version
           cache: npm
 
       # npm ci, not npm install. install resolves ^ ranges fresh on every run,
