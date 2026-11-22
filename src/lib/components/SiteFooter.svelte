@@ -34,8 +34,12 @@
 		<a href="/faq" data-sveltekit-reload>FAQ</a>
 		<a href="/releases" data-sveltekit-reload>Releases</a>
 		<span class="spacer"></span>
+		<a class="sibling" href="https://www.locustimeline.org" rel="noopener">Locus ↗</a>
 		<!-- External, so no data-sveltekit-reload: the router never intercepts a
-		     cross-origin href. -->
+		     cross-origin href. The same applies to the Locus link above: it is the
+		     sibling applet over the same GeoHistory dataset, and it sits after the
+		     spacer on purpose so the internal link list stays at five and the
+		     seventh-link rule above is not triggered. -->
 		<a class="who" href="https://www.linkedin.com/in/noffsingercb/" rel="noopener">
 			By Ben Noffsinger
 		</a>
