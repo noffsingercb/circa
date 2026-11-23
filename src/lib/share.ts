@@ -13,7 +13,7 @@ import type { LifeEvent, LifeEventKind, PlaceLevel } from './types';
  * Life events are encoded rather than derived segments: the tiles for the
  * sender's own birth, moves and death come from TimelineView's lifeEvents
  * prop, so a segments-only payload would hand the recipient the history with
- * the life removed from it. (The /embed route has exactly that bug today.)
+ * the life removed from it.
  * deriveSegments then runs on the recipient's side from the same rows, so
  * their query is the sender's query by construction rather than by agreement.
  *

@@ -38,6 +38,12 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Install browser for iframe regression
+        run: npx playwright install --with-deps chromium --only-shell
+
+      - name: Test embedded timeline in an iframe
+        run: npm run test:embed
+
       # A deliberately fake API origin. The build must not depend on a real one,
       # and giving it a recognisable value lets the assertion below prove that
       # the CSP is genuinely derived from this variable rather than from a

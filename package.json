@@ -11,6 +11,7 @@
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync",
 		"test": "vitest run",
+		"test:embed": "node scripts/test-embed.mjs",
 		"test:watch": "vitest",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
 	},
@@ -18,6 +19,7 @@
 		"@sveltejs/adapter-static": "^3.0.6",
 		"@sveltejs/kit": "^2.7.0",
 		"@sveltejs/vite-plugin-svelte": "^3.1.2",
+		"playwright": "1.63.0",
 		"svelte": "^4.2.19",
 		"svelte-check": "^4.0.0",
 		"tslib": "^2.7.0",

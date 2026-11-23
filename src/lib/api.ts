@@ -261,6 +261,6 @@ export function capEntries(entries: CircaEntry[]): CircaEntry[] {
 			: [...ambient];
 
 	return [...kept, ...universal].sort(
-		(a, b) => a.dateStartISO.localeCompare(b.dateStartISO) || a.id.localeCompare(b.id)
+		(a, b) => a.displayDateISO.localeCompare(b.displayDateISO) || a.id.localeCompare(b.id)
 	);
 }
