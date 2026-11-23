@@ -3,10 +3,15 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { chromium } from 'playwright';
+import { createServer } from 'node:net';
 
-const port = 4173;
+const port = await new Promise((resolve, reject) => {
+  const probe = createServer();
+  probe.once('error', reject);
+  probe.listen(0, '127.0.0.1', () => { const { port } = probe.address(); probe.close(() => resolve(port)); });
+});
 const base = `http://127.0.0.1:${port}`;
-const server = spawn('npm', ['run', 'dev', '--', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], {
+const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], {
   env: { ...process.env, VITE_CIRCA_API: 'https://api.ci.invalid' },
   stdio: 'pipe',
 });
