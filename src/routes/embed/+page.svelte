@@ -2,7 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import EventForm from '$lib/components/EventForm.svelte';
 	import TimelineView from '$lib/components/TimelineView.svelte';
-	import { result, status } from '$lib/session';
+	import { result, status, timelineEvents } from '$lib/session';
 
 	/**
 	 * Chromeless build for iframing into another page.
@@ -92,7 +92,7 @@
 	{#if $status === 'loading'}
 		<p class="working">Looking through the record…</p>
 	{:else if $status === 'ready' && $result}
-		<TimelineView data={$result} />
+		<TimelineView data={$result} lifeEvents={$timelineEvents} />
 	{/if}
 </div>
 

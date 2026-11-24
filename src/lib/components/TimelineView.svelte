@@ -12,8 +12,8 @@
 	/**
 	 * The visitor's own life events, merged into the same stream as the history.
 	 *
-	 * Optional, and empty by default, so the component still renders on its own
-	 * in the embed route where there is no form to supply them.
+	 * Optional and empty by default for callers without life events. Both the
+	 * main and embed forms pass the snapshot used for their current result.
 	 */
 	export let lifeEvents: LifeEvent[] = [];
 
@@ -96,10 +96,8 @@
 	 * both the entry and the segment list that entry.segmentIndex points into.
 	 * The card is given the answer rather than the means to work it out.
 	 *
-	 * Null on the embed route, where a shared timeline is rendered without the
-	 * segments that produced it. The card treats null as "not votable" and drops
-	 * its thumbs -- correct, since a vote attributed to the wrong era is worse
-	 * than no vote, and those segments belonged to whoever sent the link.
+	 * Null if no matching segment is available. The card treats null as "not
+	 * votable", since a vote attributed to the wrong era is worse than no vote.
 	 */
 	function decadeFor(entry: CircaEntry, list: SegmentInput[]): string | null {
 		const segment = list[entry.segmentIndex];

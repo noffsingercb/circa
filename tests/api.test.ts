@@ -86,12 +86,22 @@ describe('capEntries', () => {
 
 	it('leaves a short response untouched apart from ordering', () => {
 		const result = capEntries([
-			entry({ id: 'b', dateStartISO: '1950-01-01' }),
-			entry({ id: 'a', dateStartISO: '1930-01-01' }),
-			entry({ id: 'u', tier: 'universal', scope: 'universal', dateStartISO: '1940-01-01' })
+			entry({ id: 'b', dateStartISO: '1950-01-01', displayDateISO: '1950-01-01' }),
+			entry({ id: 'a', dateStartISO: '1930-01-01', displayDateISO: '1930-01-01' }),
+			entry({ id: 'u', tier: 'universal', scope: 'universal', dateStartISO: '1940-01-01', displayDateISO: '1940-01-01' })
 		]);
 
 		expect(result.map((row) => row.id)).toEqual(['a', 'u', 'b']);
+	});
+
+	it('sorts bookends by display date and retains the ID tiebreak', () => {
+		const result = capEntries([
+			entry({ id: 'cold-war-end', dateStartISO: '1947-03-12', dateEndISO: '1991-12-26', displayDateISO: '1991-12-26', phase: 'ends' }),
+			entry({ id: 'later-a', dateStartISO: '1980-01-01', displayDateISO: '1980-01-01' }),
+			entry({ id: 'later-b', dateStartISO: '1980-01-01', displayDateISO: '1980-01-01' }),
+			entry({ id: 'cold-war-begin', dateStartISO: '1947-03-12', displayDateISO: '1947-03-12', phase: 'begins' })
+		]);
+		expect(result.map((row) => row.id)).toEqual(['cold-war-begin', 'later-a', 'later-b', 'cold-war-end']);
 	});
 
 	it('drops the lowest-scoring ambient rows, not the latest-dated ones', () => {
